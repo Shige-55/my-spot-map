@@ -272,6 +272,8 @@ test('更新資産の取得が失敗しても旧版を保ち、オフライン�
   await context.setOffline(true);
   await page.reload();
   await expect(page.locator('.spot-name')).toHaveText('更新失敗後も残る架空地点');
-  expect(await page.evaluate(() => window.caches.keys())).toEqual(caches);
+  await expect(page.locator('meta[name="pwa-test-build"]')).toHaveAttribute('content', 'a');
+  // 再起動時の更新再試行で一時キャッシュが作られるため、失敗後の整理完了を待つ。
+  await expect.poll(() => page.evaluate(() => window.caches.keys())).toEqual(caches);
   expect(await records(page)).toEqual(before);
 });
