@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#155e56" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="MySpotMap" />
+    <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="%BASE_URL%icons/icon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="%BASE_URL%icons/apple-touch-icon.png" />
+    <meta name="description" content="自分だけのお気に入りの場所を、地図で見つける。" />
+    <title>マイスポットマップ</title>
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">
+        <svg class="brand-icon" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <path d="M26 13C26 21 16 29 16 29S6 21 6 13a10 10 0 1 1 20 0Z" stroke="currentColor" stroke-width="2.5" />
+          <circle cx="16" cy="13" r="3.5" fill="currentColor" />
+        </svg>
+        <div>
+          <h1>マイスポットマップ</h1>
+          <p>お気に入りの場所を、ひとつの地図に。</p>
+        </div>
+      </div>
+      <div class="header-actions"><span class="header-label">わたしの地図</span><button id="open-settings" type="button" class="secondary-button" aria-haspopup="dialog" aria-controls="settings-dialog" disabled>設定</button></div>
+    </header>
+    <p id="offline-note" class="offline-note" role="status" hidden>オフラインです。地点の操作は使えますが、背景地図は表示できないことがあります。</p>
+
+    <nav class="view-tabs" role="tablist" aria-label="表示の切り替え">
+      <button id="map-tab" type="button" role="tab" aria-controls="map-panel" aria-selected="true">地図</button>
+      <button id="list-tab" type="button" role="tab" aria-controls="list-panel" aria-selected="false" tabindex="-1">登録地点 <span class="tab-count">0</span></button>
+    </nav>
+
+    <main class="workspace">
+      <section id="list-panel" class="list-panel" aria-labelledby="list-heading">
+        <div class="panel-heading">
+          <div><p class="eyebrow">お気に入りの場所</p><h2 id="list-heading">登録地点</h2></div>
+          <span class="count-badge">0件</span>
+        </div>
+        <form id="spot-filters" class="spot-filters" role="search" aria-label="登録地点の検索">
+          <label for="spot-query">名前・メモを検索</label>
+          <input id="spot-query" type="search" placeholder="例：公園、静かな場所" autocomplete="off" />
+          <label for="category-filter">カテゴリで絞り込み</label>
+          <select id="category-filter"><option value="">すべてのカテゴリ</option></select>
+          <div class="filter-footer"><p id="filter-summary" aria-live="polite">0件を表示 / 全0件</p><button id="clear-filters" type="button" class="text-button">絞り込みを解除</button></div>
+        </form>
+        <div class="empty-state">
+          <svg class="empty-icon" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <path d="m8 23 15-7 18 7 15-7v33l-15 7-18-7-15 7V23Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+            <path d="M23 29v20m18-16v23M42 15c0 7-10 16-10 16S22 22 22 15a10 10 0 1 1 20 0Z" fill="#f0f7f3" stroke="currentColor" stroke-width="2" />
+            <circle cx="32" cy="15" r="3" fill="currentColor" />
+          </svg>
+          <h3>まだ登録地点はありません</h3>
+          <p>地図を動かして、好きな場所を中央へ。<br />「地図中心を登録」から追加できます。</p>
+        </div>
+        <ul id="spot-list" class="spot-list" aria-label="保存した地点"></ul>
+        <div id="read-error" class="read-error" hidden><p role="alert"></p><button id="retry-load" type="button">もう一度読み込む</button></div>
+        <p class="list-footnote">地点はこのブラウザ内に保存されます。ブラウザデータの削除や端末変更で失われることがあります。</p>
+      </section>
+
+      <section id="map-panel" class="map-panel" aria-labelledby="map-heading">
+        <div class="map-heading">
+          <h2 id="map-heading">地図</h2>
+          <div class="map-actions"><button id="locate" type="button" class="secondary-button">現在地</button><button id="register-center" type="button" class="primary-button" disabled>地図中心を登録</button></div>
+        </div>
+        <p id="map-status" class="map-status" role="status" hidden></p>
+        <p id="location-status" class="location-status" role="status" hidden></p>
+        <div id="map" aria-label="地図。矢印キーで移動、プラス・マイナスキーで拡大・縮小できます。"></div>
+      </section>
+    </main>
+    <p id="app-status" class="app-status" role="status" hidden></p>
+    <aside id="pwa-update" class="pwa-update" aria-label="アプリの更新" hidden>
+      <p id="pwa-update-message" aria-live="polite">更新版を利用できます。</p>
+      <button id="apply-update" type="button" class="primary-button">更新する</button>
+    </aside>
+
+    <dialog id="spot-dialog" aria-labelledby="spot-dialog-heading">
+      <form id="spot-form" novalidate>
+        <h2 id="spot-dialog-heading">地点を登録</h2>
+        <p class="form-hint">名前と位置を確認して保存してください。</p>
+        <p id="form-error" class="form-error" role="alert" tabindex="-1" hidden></p>
+        <fieldset id="spot-fields">
+          <label for="spot-name">名前（必須・100文字以内）</label>
+          <input id="spot-name" name="name" type="text" autocomplete="off" required autofocus />
+          <label for="spot-memo">メモ（2000文字以内）</label>
+          <textarea id="spot-memo" name="memo" rows="3"></textarea>
+          <label for="spot-category">カテゴリ（任意・50文字以内）</label>
+          <input id="spot-category" name="category" type="text" list="category-options" autocomplete="off" placeholder="新しく入力、または候補から選択" />
+          <datalist id="category-options"></datalist>
+          <div class="coordinate-fields">
+            <div><label for="spot-latitude">緯度（必須）</label><input id="spot-latitude" name="latitude" type="text" inputmode="decimal" required /><small>−90〜90</small></div>
+            <div><label for="spot-longitude">経度（必須）</label><input id="spot-longitude" name="longitude" type="text" inputmode="decimal" required /><small>−180〜180</small></div>
+          </div>
+          <p id="spot-zoom" class="form-hint"></p>
+        </fieldset>
+        <div class="dialog-actions">
+          <button id="cancel-spot" type="button" class="secondary-button">キャンセル</button>
+          <button id="save-spot" type="submit" class="primary-button">保存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="delete-dialog" aria-labelledby="delete-heading" aria-describedby="delete-description">
+      <form id="delete-form">
+        <h2 id="delete-heading">地点を削除しますか？</h2>
+        <p id="delete-description"></p>
+        <p id="delete-error" class="form-error" role="alert" tabindex="-1" hidden></p>
+        <div class="dialog-actions">
+          <button id="cancel-delete" type="button" class="secondary-button" autofocus>キャンセル</button>
+          <button id="confirm-delete" type="submit" class="danger-button">削除する</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="settings-dialog" aria-labelledby="settings-heading">
+      <h2 id="settings-heading" tabindex="-1">設定・バックアップ</h2>
+      <p class="settings-description">地点はこのブラウザ内に保存されます。ブラウザデータの削除や端末変更に備え、定期的にJSONを保管してください。</p>
+      <p class="settings-description">JSONには個人の地点が含まれます。Gitや公開サイトへ追加せず、安全な場所で保管してください。ファイルはサーバーへ送信しません。</p>
+      <p id="backup-error" class="form-error" role="alert" tabindex="-1" hidden></p>
+      <p id="backup-status" class="backup-status" role="status" tabindex="-1" hidden></p>
+      <fieldset id="backup-controls">
+        <section class="backup-section" aria-labelledby="pwa-heading">
+          <h3 id="pwa-heading">アプリ・オフライン</h3>
+          <p>ホーム画面に追加するとアプリとして開けます。初回はオンラインで開いてください。背景地図のオフライン表示は保証されません。</p>
+          <p id="pwa-state" aria-live="polite">オフライン利用の準備を確認しています…</p>
+          <button id="check-updates" type="button" class="secondary-button" disabled>更新を確認</button>
+        </section>
+        <section class="backup-section" aria-labelledby="export-heading">
+          <h3 id="export-heading">JSONバックアップ</h3>
+          <p>検索やカテゴリに関係なく、削除記録を含む全地点を保存します。現在地の表示は含みません。</p>
+          <button id="export-backup" type="button" class="primary-button">JSONバックアップを保存</button>
+          <a id="download-backup-again" class="download-link" hidden>もう一度ダウンロード</a>
+        </section>
+        <section class="backup-section" aria-labelledby="import-heading">
+          <h3 id="import-heading">バックアップから復元</h3>
+          <p>復元は全件置換です。UTF-8のJSON、10MiB・10,000件まで（削除記録を含む）に対応します。</p>
+          <label for="backup-file">復元するJSONファイル</label>
+          <input id="backup-file" type="file" accept=".json,application/json" />
+          <button id="validate-backup" type="button" class="secondary-button">ファイルを検証</button>
+        </section>
+        <section id="restore-preview" class="backup-section" aria-labelledby="restore-heading" hidden>
+          <h3 id="restore-heading" tabindex="-1">復元内容の確認</h3>
+          <dl class="restore-summary">
+            <dt>ファイル</dt><dd id="restore-filename"></dd>
+            <dt>書き出し日時（端末の時刻表示）</dt><dd id="restore-exported-at"></dd>
+            <dt>現在の保存内容</dt><dd id="restore-current"></dd>
+            <dt>取り込み後の内容</dt><dd id="restore-incoming"></dd>
+          </dl>
+          <p class="restore-warning">現在の全地点と削除記録を、選んだファイルの内容に置き換えます。ファイルにない地点は削除されます。</p>
+          <p id="empty-restore-warning" class="restore-warning" hidden>空のバックアップです。復元すると、現在の全地点と削除記録がなくなります。</p>
+          <p>置換前に、上の「JSONバックアップを保存」で現在の内容を保管することをおすすめします。</p>
+          <label class="confirmation"><input id="confirm-replace" type="checkbox" />現在の全データを置き換えることを確認しました</label>
+          <div class="dialog-actions restore-actions">
+            <button id="cancel-restore" type="button" class="secondary-button">復元をキャンセル</button>
+            <button id="restore-backup" type="button" class="danger-button" disabled>全件置換して復元</button>
+          </div>
+        </section>
+      </fieldset>
+      <div class="dialog-actions"><button id="close-settings" type="button" class="secondary-button">閉じる</button></div>
+    </dialog>
+    <noscript>地図を表示するにはJavaScriptを有効にしてください。</noscript>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
