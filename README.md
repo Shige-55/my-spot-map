@@ -1,6 +1,6 @@
 # My Spot Map 開発開始ガイド
 
-iPhone向け個人用地点登録PWAを段階的に開発しています。2026-11-01時点で第6段階の公開準備まで完了し、利用者の依頼に基づいてpush・Pages公開を進めています。地点操作・検索・カテゴリ・現在地・JSONバックアップ、オフライン対応と更新通知を利用できます。公開対象は`Shige-55/my-spot-map`の`main`です。GitHub上のCI・HTTPS配信・iPhone実機のホーム画面起動の結果は公開作業記録へ追記します。
+iPhone向け個人用地点登録PWAです。2026-11-01に第6段階のpush・GitHub Pages公開を完了しました。公開URL: [My Spot Map](https://shige-55.github.io/my-spot-map/)。地点操作・検索・カテゴリ・現在地・JSONバックアップ、オフライン対応と更新通知を利用できます。公開元は`Shige-55/my-spot-map`の`main`。GitHub上のCIと公開HTTPS上のPC検証は成功し、iPhone実機のホーム画面起動と実端末の現在地取得は未確認です。
 
 ## 文書
 - REQUIREMENTS.md: 実装範囲と受け入れ条件
@@ -315,7 +315,7 @@ npm.cmd run preview -- --base=/MySpotMap/
 - 公式actionlint 1.7.12を配布元のSHA-256と照合して実行し、ワークフローの構文・式・設定検査に成功。ツールは`.pwa-test/`内だけに置き、依存や公開資産へ追加していません。
 - ローカル実行環境はWindows／Node.js 25.7.0／npm 11.10.1／Edge。GitHubホスト上のNode.js 24・ChromiumでのCI、PagesのHTTPS配信、iPhone実機は未実行です。自動テストは架空の地点と分離したブラウザ保存領域を使用します。
 
-### 公開する際の操作（今回は未実施）
+### 今後の公開・更新操作（初回の実行結果は公開作業記録を参照）
 1. GitHubへ対象アカウントでログインし、指定リポジトリへのアクセスと`main`を確認します。リポジトリがまだなければ作成が必要です。既存のリモート内容がある場合は、先に確認して統合し、強制pushは行いません。
 2. GitHub Desktopなどで変更を確認し、文書・ソース・設定・package-lock.jsonをコミット対象にします。個人のJSON、`.env`、秘密鍵、node_modules、dist、テスト生成物は追加しません。
 3. 改めてpush・公開を依頼した後に、mainをoriginへpushします。push時のActionsは検証だけを実行します。失敗した場合は公開へ進めません。
@@ -323,11 +323,11 @@ npm.cmd run preview -- --base=/MySpotMap/
 5. Actionsの「検証とGitHub Pages公開」→「Run workflow」でmainを指定します。全検証成功後にdistをアップロード・配信します。組み込みGITHUB_TOKENを使い、公開用PATをソースへ保存する必要はありません。
 6. deployジョブに表示されるURLで以下の受け入れ確認を行います。公開後にPCを停止してもPagesから配信されます。localhostと公開HTTPSサイトは保存領域が異なるため、必要な地点はJSONでバックアップし、移行先で置換内容を確認して復元します。
 
-### 公開後・実機の受け入れチェック（すべて未確認）
-- [ ] GitHub上のCIが成功し、Pagesが想定HTTPS URLから配信される。HTML・JS・CSS・manifest・全アイコン・SWが404なく同じサブパスから読める。
-- [ ] PCで地図移動・ズーム・一覧選択、狭幅で地図／登録地点タブ往復ができ、帰属表示が見える。地図通信失敗でも一覧と地点操作を続けられる（F01・F03）。
+### 公開後・実機の受け入れチェック
+- [x] GitHub上のCIが成功し、Pagesが想定HTTPS URLから配信される。HTML・JS・CSS・manifest・全アイコン・SWが404なく同じサブパスから読める。
+- [x] PCで地図移動・ズーム・一覧選択、狭幅で地図／登録地点タブ往復ができ、帰属表示が見える。地図通信失敗でも一覧と地点操作を続けられる（F01・F03、CIと公開HTTPSの分離Edgeで検証）。
 - [ ] iPhone Safariで長押し登録・ドラッグ／複数指のキャンセル・検索とカテゴリ併用・編集・確認付き削除・再読み込み後の保持を確認する。キーボード・セーフエリア・回転も確認する（F02〜F06・F09）。
-- [ ] HTTPS上で現在地をボタンから取得でき、拒否しても日本語案内後に登録操作を続けられる。現在地が登録地点として自動保存されない（F08）。
+- [ ] HTTPS上で実端末の現在地をボタンから取得でき、拒否しても日本語案内後に登録操作を続けられる。現在地が登録地点として自動保存されない（F08、公開HTTPSで架空座標・ブラウザ権限拒否は確認済み、実位置は未確認）。
 - [ ] Safariの「ファイル」へJSONを保存し、変更後に復元して一致する。不正JSON・置換キャンセルで既存地点が変わらない（F07）。
 - [ ] オンライン準備完了後にホーム画面へ追加し、名前・アイコン・standalone表示を確認する。アプリを閉じ、通信なしで再起動して一覧・検索・登録・編集・削除・JSON保存／復元を確認する。背景地図のオフライン表示は保証しない（F10）。
 - [ ] 更新版の公開後も編集中の入力を保持し、保存・キャンセル後の「更新する」で切り替わる。更新後に地点が残る。Safariとホーム画面アプリの保存共有は前提にしない。
@@ -335,13 +335,17 @@ npm.cmd run preview -- --base=/MySpotMap/
 参照: [ViteのGitHub Pages配信](https://vite.dev/guide/static-deploy.html#github-pages)、[GitHub Pagesのカスタムワークフロー](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)、[公式actionlint](https://github.com/rhysd/actionlint)。
 
 ## 公開作業記録（2026-11-01）
-- 利用者からpush・Pages公開の依頼を受け、作業を開始しました。
-- GitHubの認証済みアカウントはShige-55。対象リポジトリはプライベート、既存コミットなし、既定ブランチmain、push／管理権限あり。Pagesはまだ設定されていません。
-- ローカルのコミットにはGitHubアカウントに対応するnoreplyアドレスを使います。公開範囲の変更・有料プラン導入は行っていません。
-- push前のlint・build・verify:distが成功。除外対象と認証情報の混入がないことを確認しました。直前の全テスト232件も成功しています。
-- GitHub上のCI、Pages設定と配信、HTTPS上の動作確認はこれから実施します。iPhone実機は別途確認が必要です。
-- 初回コミット`78ae395`をmainへpush済み。利用者の承諾後にリポジトリをPublicへ変更し、Pagesのworkflow配信とHTTPSを有効化しました。有料サービスは導入していません。
-- 初回CIでは単体181件・画面39件が成功。PWAの失敗時キャッシュ検査は、オフライン再起動で生じる更新再試行の一時キャッシュの整理完了を待つよう調整し、旧版のHTMLが残る検査も追加しています。修正後のCIと公開結果を追記します。
+- 利用者からpush・Pages公開の依頼を受けて実施。GitHubの認証済みアカウントはShige-55、対象の既定ブランチはmain、既存コミットなし、push／管理権限ありと確認しました。
+- 初回コミット`78ae395`をmainへpush。対象は当初プライベートでしたが、Pages APIが現在のプランでは利用不可と返したため、利用者の明示承諾後にPublicへ変更しました。有料サービスは導入していません。
+- コミットにはGitHubアカウントに対応するnoreplyアドレスを使用。ソース・文書・設定・lockfile・架空データのテストだけをpushし、地点DB・個人バックアップ・認証情報・生成物は含めていません。
+- push前のlint・build・verify:distが成功。初回CIのPWA検査で、オフライン再起動時の更新再試行中に一時キャッシュを比較するタイミング差が判明し、整理完了を待つ検査へ修正。旧版HTMLが残る検査も追加しました。アプリ本体やDBの仕様変更はありません。
+- 修正コミット`be487a3`の[push時CI](https://github.com/Shige-55/my-spot-map/actions/runs/41214410973)が成功。Ubuntu 24.04／Node.js 24／Chromiumでnpm ci・lint・単体181件＋画面39件＋PWA12件（計232件）・build・verify:distを完了しました。ローカルのlintとPWA12件の再検証も成功。
+- Pagesのworkflow配信・HTTPSを有効化し、github-pages環境の配信元をmainだけに制限。[公開ワークフロー](https://github.com/Shige-55/my-spot-map/actions/runs/41214447663)でも全検証後の配信が成功しました。公開したアプリの実装コミットは`be487a3`。この結果記録の追加は文書のみで配信資産を変更しません。
+- [公開HTTPS URL](https://shige-55.github.io/my-spot-map/)を分離したEdgeで確認。HTML・JS・CSS・manifest・全アイコン・SWが404なく読み込まれ、ブラウザ実行エラーは0件。manifestのstart_url／scopeとSW scopeが`/my-spot-map/`で一致し、通常192／512px・maskable512px・Apple180pxのアイコンも確認しました。
+- 実OSMタイルのHTTP 200、PCの地図移動・ズーム・一覧、390px幅のタブ往復・横はみ出しなし・帰属表示を確認。初回準備後のオフライン再読み込みで、保存した架空地点と検索・地図タブを利用できました。シェルキャッシュ9資産に外部タイルや利用者JSONは含まれていません。
+- 公開HTTPS上でブラウザ権限と架空座標を使った現在地表示（精度円含む）・権限拒否の日本語案内・拒否後の地点保存を確認。現在地の自動保存はありません。実端末の位置取得を確認したものではありません。
+- 自動検証の架空地点は一時ブラウザDBのみへ保存し、終了後にブラウザを破棄しました。利用者の既存データへは触れていません。公開HTTPSとlocalhostの保存領域は別なので、必要な地点はJSONで移行してください。
+- 未確認: iPhone実機Safari・ホーム画面追加／standalone起動・実際の長押し／ピンチ・実位置の取得・実機でのオフライン再起動とJSON保存／復元・公開更新版への切替。上のチェックリストに沿って確認してください。
 
 ## 進捗
 - [x] 要件・設計・Codexルール・手順文書
@@ -350,6 +354,6 @@ npm.cmd run preview -- --base=/MySpotMap/
 - [x] 段階3: スマホ操作と検索（単体76件・画面27件、iPhone実機未確認）
 - [x] 段階4: バックアップと復元（単体154件・画面38件、iPhone実機未確認）
 - [x] 段階5: PWA（単体173件・画面39件・PWA10件、HTTPS／iPhone実機未確認）
-- [x] 段階6: 公開準備（base・Actions・公開資産検査・公開手順、push／公開は未実施）
-- [ ] GitHub上のCI・実際のPages公開とHTTPS確認（操作の依頼後に実施）
+- [x] 段階6: 公開準備・push・Pages配信（base・Actions・公開資産検査・公開手順）
+- [x] GitHub上のCI・実際のPages公開とHTTPS確認（PCの分離Edgeで検証）
 - [ ] iPhone実機Safari・ホーム画面起動での受け入れ

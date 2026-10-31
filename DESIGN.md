@@ -23,7 +23,7 @@ src/pwa/                       # 更新通知
 tests/
 .github/workflows/deploy.yml
 ```
-第5段階では標準Service Worker APIとViteのビルド拡張でPWAを実装し、追加依存を使わない。地図、DB、地点操作、検索・カテゴリ・長押し・現在地、JSONバックアップと復元、PWAと検証環境を作成済み。第6段階で公開先設定とGitHub Actionsを作成済み。実際のpush・Pages設定変更・公開・HTTPS／iPhone実機確認は未実施。
+第5段階では標準Service Worker APIとViteのビルド拡張でPWAを実装し、追加依存を使わない。地図、DB、地点操作、検索・カテゴリ・長押し・現在地、JSONバックアップと復元、PWAと検証環境を作成済み。第6段階で公開先設定とGitHub Actionsを作成し、利用者の依頼に基づくpush・Pages公開・HTTPS上のPC検証まで完了。iPhone実機は未確認。
 
 ### 第1段階の実装
 - `src/config.js`: 初期座標、zoom、タイルURL、帰属表示を集約。
@@ -155,8 +155,8 @@ HTTPSのPagesで現在地・Service Workerを確認。iPhoneからPCのHTTP LAN 
 - `.github/workflows/deploy.yml`はmainへのpush／PRで検証し、mainの手動実行だけが配信する。手動時は実行リポジトリ・refと設定の一致を検証。Ubuntu 24.04・Node.js 24・Chromiumでlockfileによるnpm ci、lint、全テスト、build、verify:distを実行する。
 - 検証ジョブはcontents readだけ。公開ジョブはpages write／id-token writeだけで、ソースのcheckoutは行わず検証済みdistをPagesへ配信する。公式ActionsをリリースのコミットSHAに固定し、checkoutの資格情報保持を無効化。Pagesの自動有効化はせず、設定のbase_pathとビルドbaseが異なれば配信を停止する。
 - `build/verifyPagesBuild.js`で許可された静的資産だけが出力されていること、SWのキャッシュ対象と出力の一致、HTML／manifest／アイコンとbase・版・寸法の整合を確認。余分なJSON・秘密ファイル・シンボリックリンクを拒否する。OSMタイル・利用者DB・バックアップを公開対象に含めない。
-- ローカルGitのoriginとmainを設定済みだがコミット・push・公開は未実施。実際の公開には追加の操作依頼が必要。想定URLは`https://shige-55.github.io/my-spot-map/`。独自ドメインは対象外。
-- root／検証用サブパスに加えて実公開baseのビルドと実Vite previewでPWAを検証。異なるbaseや余分なJSONの拒否も検証する。GitHub上のCIとHTTPS／実機の受け入れ結果は別途記録する。
+- 利用者の依頼後、ローカルGitのorigin／mainからコミット・push・公開を実施。現在のプランでプライベートからPages公開できなかったため、明示承諾を受けて対象リポジトリをPublicへ変更した。公開URLは`https://shige-55.github.io/my-spot-map/`。HTTPSを強制し、github-pages環境の配信元をmainに制限。独自ドメインや有料サービスは導入しない。
+- root／検証用サブパスに加えて実公開baseのビルドと実Vite previewでPWAを検証。異なるbaseや余分なJSONの拒否も検証する。Ubuntu 24.04／Node.js 24／ChromiumのCIで232件が成功し、公開HTTPSのEdgeで資産・SW・実タイル・オフライン再起動と模擬現在地／権限拒否を確認済み。iPhone実機と実位置の取得は未確認。結果と操作手順はREADMEの公開作業記録を参照。
 
 ## OpenStreetMap
 タイルURLは設定へ集約: https://tile.openstreetmap.org/{z}/{x}/{y}.png 。常時見える「© OpenStreetMap contributors」とhttps://www.openstreetmap.org/copyrightへのリンクを表示。Refererを妨げる設定やキャッシュ回避をしない。可用性保証はないためエラー時も保存済み一覧を提供する。
