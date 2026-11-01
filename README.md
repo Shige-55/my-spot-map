@@ -15,6 +15,7 @@ iPhone向け地点登録PWAです。個人地点の端末内保存に加え、�
 - 2026-11-01の切替確認: 利用者の移行確認後、GitHub Pages APIで旧配信を停止し、Pages設定の404を確認。CDNの反映後、旧URL・index.html・JS・CSS・SW・manifestの404と、新URLの本人確認画面200・未認証SW／共有APIの401を確認しました。現行ActionsにはPages配信ジョブ・配信権限がありません。取得済みの旧アプリや公開コードのコピーを回収したものではありません。
 - 2026-11-01の不具合修正: PCでパスキー認証後に`ERR_FAILED`となる問題を、Cloudflareと同じ`index.html`の転送を使う隔離ブラウザで再現しました。転送済みHTMLのキャッシュを画面遷移へ直接返すことが原因です。Service Workerで安全な合成Responseへ変換し、データ・パスキーを保持して更新する[復旧ページ](https://my-spot-map-private.my-spot-map-shige55.workers.dev/auth/update)を追加しました。旧版でのエラー再現→復旧ページで更新→保存地点保持→再ログイン・再読み込みの成功を自動検証しています。修正版を配信後、利用者も復旧ページからPCの地図表示が戻ったことを確認しました。iPhone用パスキー追加と表示は継続確認します。
 - 不具合修正の検証: lint・build・verify:dist・check:private、単体210件、PWA12件、旧SWからの復旧を含む保護付きブラウザ統合1件が成功。本番の復旧画面200とJSエラーなし、未認証SW／共有APIの401を確認しました。地点DB・認証鍵・権限・料金プランの変更はありません。
+- 修正後の`1d7b60f`の[GitHub CI](https://github.com/Shige-55/my-spot-map/actions/runs/41279202846)でも、Node.js24／Chromiumで単体210件＋画面39件＋PWA12件＋保護付き統合1件（計262件）、lint・build・verify:distがすべて成功。エラー画面確定前に次の遷移を始めるテストのタイミング差も修正済みです。
 - 利用・開発・無料枠・復旧の手順は[招待制版の配信・運用](PRIVATE_DEPLOYMENT.md)、詳しい仕様は[共有設計](SHARING_DESIGN.md)を参照してください。
 
 ## 文書
