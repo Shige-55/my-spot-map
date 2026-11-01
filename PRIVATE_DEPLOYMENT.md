@@ -2,6 +2,8 @@
 
 2026-11-01。Cloudflare Workers＋D1のFreeプランとパスキーを使う。Zero Trust／Access・カード登録・メール配信・独自ドメインを使わない。GitHub Actionsは検証専用とし、Pages公開のジョブと権限を削除した。
 
+切替記録: 2026-11-01、利用者が管理者登録を操作し、新URLの地図表示とJSON復元を確認した。その後に旧GitHub Pagesを停止し、Pages設定と旧HTML・JS・CSS・SW・manifestの404、新URLの本人確認画面と未認証取得拒否を確認した。端末内の旧DBや登録地点は削除していない。iPhoneの新URLでのホーム画面起動・2端末共有は別途確認する。
+
 ## 利用開始と移行
 
 1. 旧URLで「設定→JSONを保存」し、安全な場所へバックアップする。旧URLのDBやホーム画面アプリを消さない。

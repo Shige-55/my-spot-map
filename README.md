@@ -1,6 +1,6 @@
 # My Spot Map 開発開始ガイド
 
-iPhone向け地点登録PWAです。個人地点の端末内保存に加え、本人と招待・承認した利用者だけが使う版へ移行中です。最新の方式は「招待リンク→パスキー登録→管理者承認→パスキーログイン」。カード登録・Zero Trustは使用しません。初期版は[旧GitHub Pages](https://shige-55.github.io/my-spot-map/)で公開済みですが、こちらはまだ一般公開です。JSONの保存と移行確認後に停止します。以下の第1〜6段階と初回公開の記録は履歴として保持します。
+iPhone向け地点登録PWAです。個人地点の端末内保存に加え、本人と招待・承認した利用者だけが使える[招待制版](https://my-spot-map-private.my-spot-map-shige55.workers.dev)へ移行しました。方式は「招待リンク→パスキー登録→管理者承認→パスキーログイン」。カード登録・Zero Trustは使用しません。利用者の地図表示・JSON復元確認後、2026-11-01に旧GitHub Pagesを停止しました。以下の第1〜6段階と初回公開の記録は履歴として保持します。
 
 ## 最新の進捗：招待制と共有（2026-11-01）
 
@@ -9,9 +9,10 @@ iPhone向け地点登録PWAです。個人地点の端末内保存に加え、�
 - Workers＋D1のFreeプラン用設定、DBマイグレーション、秘密情報のGit除外を作成。既存個人DB version 1とJSON形式は維持しました。ActionsのPages配信ジョブと権限を削除し、検証専用へ変更しました。
 - ローカルのlint・本番build・verify:dist・Worker dry-runが成功。単体209件、画面39件、PWA12件、仮想パスキーを使う保護付きブラウザ統合1件（計261件）を検証。本番依存のnpm auditは0件です。画面テストで起動前の非表示タブを待たずに進む問題を修正しました。
 - D1の2マイグレーションを専用の本番DBへ適用し、[新しい招待制版](https://my-spot-map-private.my-spot-map-shige55.workers.dev)へ配信済み。HTTPSで未認証のHTML直リンク・JS・SW・manifest・アイコン・APIの拒否、不正招待の拒否、管理者登録オプションの発行を確認しました。iPhone幅のログイン画面はJSエラー・横はみ出しなし。
-- 管理者の実パスキー登録とJSON移行の本人確認待ちです。旧Pages停止とiPhone2端末の受け入れは移行確認後に行います。旧サイトの地点を消して移行する必要はありません。
+- 利用者が管理者登録を操作し、新URLの地図表示とJSON復元を確認しました。旧Pagesは停止済みです。端末内の旧DBを削除する操作は行っていません。新URLのiPhoneホーム画面起動と2端末での共有受け入れは継続して確認します。
 - ソースはmainへpush済み。初回のNode.js24 CIでPWA障害テストの条件差を検出し、検証サーバーの障害を再試行中も維持するよう修正。`842c62d`の[再検証](https://github.com/Shige-55/my-spot-map/actions/runs/41276034410)で260件・lint・build・verify:distが成功しました。その後、相互の共有相手申請を二重登録しない処理と1件のテストを追加しました。
-- 最終実装`4e03a5a`の[GitHub検証](https://github.com/Shige-55/my-spot-map/actions/runs/41276269467)はNode.js24／Ubuntu24.04／Chromiumで261件・lint・build・verify:distがすべて成功しました。同じ実装を招待制Workerへ配信済みです。管理者の実パスキー登録、JSON移行、旧サイト停止は未完了です。
+- 最終実装`4e03a5a`の[GitHub検証](https://github.com/Shige-55/my-spot-map/actions/runs/41276269467)はNode.js24／Ubuntu24.04／Chromiumで261件・lint・build・verify:distがすべて成功しました。同じ実装を招待制Workerへ配信済みです。
+- 2026-11-01の切替確認: 利用者の移行確認後、GitHub Pages APIで旧配信を停止し、Pages設定の404を確認。CDNの反映後、旧URL・index.html・JS・CSS・SW・manifestの404と、新URLの本人確認画面200・未認証SW／共有APIの401を確認しました。現行ActionsにはPages配信ジョブ・配信権限がありません。取得済みの旧アプリや公開コードのコピーを回収したものではありません。
 - 利用・開発・無料枠・復旧の手順は[招待制版の配信・運用](PRIVATE_DEPLOYMENT.md)、詳しい仕様は[共有設計](SHARING_DESIGN.md)を参照してください。
 
 ## 文書
@@ -399,5 +400,5 @@ npm.cmd run preview -- --base=/MySpotMap/
 - [x] 共有機能の実装・サーバー権限の隔離環境での検証
 - [x] 招待リンク＋パスキー＋管理者承認への方式変更（利用者承認）と実装
 - [x] 地点別共有・現在地の相互共有・API権限の実装と隔離環境での検証
-- [ ] 新配信先での本人登録・JSON移行・旧公開サイトの停止
+- [x] 新配信先での本人登録・JSON移行（利用者確認）・旧公開サイトの停止（API・HTTP確認）
 - [ ] iPhone2端末でのパスキー・共有・停止・オフライン受け入れ
