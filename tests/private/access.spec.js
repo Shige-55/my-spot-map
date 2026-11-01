@@ -32,6 +32,8 @@ test('パスキー、管理者承認、共有、取消、入口保護を実ブ�
   await expect.poll(() => owner.page.evaluate(() => Boolean(window.navigator.serviceWorker.controller))).toBe(true);
   // 旧SWで実際にERR_FAILEDを再現し、DBやCookieを消さずに復旧する。
   await expect(owner.page.reload()).rejects.toThrow('ERR_FAILED');
+  // reloadのrejectより遅れてブラウザのエラー画面が確定する。次の遷移との競合を防ぐ。
+  await expect.poll(() => owner.page.evaluate(() => window.document.body?.innerText.includes('ERR_FAILED')).catch(() => false)).toBe(true);
   expect((await owner.context.request.post('/__test/fix-worker')).status()).toBe(200);
   await owner.page.goto('/auth/update');
   await owner.page.getByRole('button', { name: 'アプリを更新して開く', exact: true }).click();
