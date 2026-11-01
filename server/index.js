@@ -106,8 +106,10 @@ export function createHandler({ authenticate = authenticateSession, now = () => 
           if (typeof body.userId !== 'string' || body.userId === member.id) throw new HttpError(400, '相手の共有用IDを確認してください。');
           const recipient = await query(env.DB, "SELECT id FROM app_members WHERE id=? AND status='active'", body.userId).first();
           if (!recipient) throw new HttpError(400, '共有用IDを確認できません。相手へ確認してください。');
-          await query(env.DB, `INSERT INTO contacts (requester,recipient,status) VALUES (?,?,'pending')
-            ON CONFLICT(requester,recipient) DO UPDATE SET status='pending',version=contacts.version+1 WHERE contacts.status='revoked'`, member.id, recipient.id).run();
+          await query(env.DB, `INSERT INTO contacts (requester,recipient,status) SELECT ?,?,'pending'
+            WHERE NOT EXISTS (SELECT 1 FROM contacts WHERE requester=? AND recipient=? AND status IN ('pending','accepted'))
+            ON CONFLICT(requester,recipient) DO UPDATE SET status='pending',version=contacts.version+1 WHERE contacts.status='revoked'`,
+          member.id, recipient.id, recipient.id, member.id).run();
           return json({ requested: true });
         }
         const contactId = /^\/api\/contacts\/([a-f0-9-]{36})$/.exec(url.pathname)?.[1];

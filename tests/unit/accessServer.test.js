@@ -129,6 +129,15 @@ describe('入口と招待の認証・認可', () => {
 });
 
 describe('共有地点と現在地をA・B・無関係なCで検査', () => {
+  test('双方が共有相手を申請しても関係を二重登録せず、受けた側が承認できる', async () => {
+    const a = await invite('a@example.test'), b = await invite('b@example.test');
+    expect((await call(a.email, '/api/contacts', 'POST', { userId: b.id })).status).toBe(200);
+    expect((await call(b.email, '/api/contacts', 'POST', { userId: a.id })).status).toBe(200);
+    const rows = (await (await call(b.email, '/api/contacts')).json()).contacts;
+    expect(rows).toHaveLength(1); expect(rows[0].recipient).toBe(b.id);
+    expect((await call(b.email, '/api/contacts/' + a.id, 'PUT', {})).status).toBe(200);
+    expect((await (await call(a.email, '/api/contacts')).json()).contacts).toHaveLength(1);
+  });
   test('成功応答を失った同じ操作の再送を受理し、解除後の古い再送では復活しない', async () => {
     const a = await invite('a@example.test'), b = await invite('b@example.test'); await connect(a, b);
     const operationId = globalThis.crypto.randomUUID();

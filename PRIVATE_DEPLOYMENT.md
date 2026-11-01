@@ -47,7 +47,7 @@ npm.cmd run deploy:private
 
 所有者初期化: `node scripts/prepare-owner.js`の後、`npx.cmd wrangler d1 execute my-spot-map-private --config wrangler.local.jsonc --remote --file .secrets/owner-registration.sql`を実行し、生成したHTMLから本人が登録する。所有者はDBの制約で1人、再実行時は重複作成しない。実トークンをターミナル出力やチャットに貼らない。
 
-ローカルのWorker検証は`.dev.vars`へ架空データ用の秘密値を設定し、APP_ORIGINを`http://localhost:8787`へ上書きして`dev:private`を実行する。本番鍵・実ユーザーDBをテストへ使わない。`test:private`はポート4180・インメモリSQLite・一時鍵・ブラウザ仮想パスキーで隔離した本番ビルドを検証する。`npm test`にこの検証も含める。
+ローカルのWorker検証は`.dev.vars`へ架空データ用の秘密値を設定し、APP_ORIGINを`http://localhost:8787`へ上書きする。`VITE_OFFLINE_PUBLIC_JWK`に対応するテスト公開鍵を指定してbuildし、`dev:private`を実行する。テスト鍵のbuildを本番へ配信しない（`check:private`が本番鍵との不一致を拒否する）。本番鍵・実ユーザーDBをテストへ使わない。`test:private`はポート4180・インメモリSQLite・一時鍵・ブラウザ仮想パスキーで隔離した本番ビルドを検証する。`npm test`にこの検証も含める。
 
 すべての資産に`run_worker_first: true`、プレビューURLは無効、Workerのアプリログは無効。未設定・DB障害時も公開へ切り替えない。配信前に`check:private`で検査する。秘密ファイル、個人バックアップ、D1エクスポートをGitへ追加しない。公開リポジトリには架空データだけを使う。
 
