@@ -5,6 +5,8 @@ test.beforeEach(async ({ page }) => {
   await page.route('https://tile.openstreetmap.org/**', (route) => route.fulfill({ contentType: 'image/svg+xml', body: tile }));
 });
 async function showList(page) {
+  await expect(page.locator('#register-center')).toBeVisible();
+  await expect(page.locator('#register-center')).toBeEnabled();
   const tab = page.getByRole('tab', { name: '登録地点' });
   if (await tab.isVisible()) await tab.click();
 }

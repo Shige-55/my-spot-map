@@ -14,6 +14,14 @@
     <title>マイスポットマップ</title>
   </head>
   <body>
+    <section id="access-gate" class="access-gate" aria-labelledby="access-heading">
+      <h1 id="access-heading">My Spot Map</h1>
+      <p>このアプリは管理者と招待された利用者専用です。</p>
+      <p id="access-message" role="status">本人確認と利用許可を確認しています…</p>
+      <div class="dialog-actions"><button id="access-retry" type="button" class="primary-button">利用許可を確認</button><button id="access-login" type="button" class="secondary-button">本人確認し直す</button></div>
+      <p>確認が必要な場合も、端末内の個人地点は削除しません。</p>
+    </section>
+    <div id="private-app" hidden>
     <header class="app-header">
       <div class="brand">
         <svg class="brand-icon" viewBox="0 0 32 32" fill="none" aria-hidden="true">
@@ -127,6 +135,12 @@
           <p id="pwa-state" aria-live="polite">オフライン利用の準備を確認しています…</p>
           <button id="check-updates" type="button" class="secondary-button" disabled>更新を確認</button>
         </section>
+        <section id="account-section" class="backup-section" aria-labelledby="account-heading">
+            <h3 id="account-heading">アカウント</h3>
+            <p id="account-status" aria-live="polite"></p>
+            <p>ログアウトすると、この端末のオフライン利用許可も解除します。個人地点は保持します。登録地点の共有解除は別途操作してください。</p>
+            <button id="account-logout" type="button" class="secondary-button">ログアウト</button>
+        </section>
         <section class="backup-section" aria-labelledby="export-heading">
           <h3 id="export-heading">JSONバックアップ</h3>
           <p>検索やカテゴリに関係なく、削除記録を含む全地点を保存します。現在地の表示は含みません。</p>
@@ -160,7 +174,8 @@
       </fieldset>
       <div class="dialog-actions"><button id="close-settings" type="button" class="secondary-button">閉じる</button></div>
     </dialog>
-    <noscript>地図を表示するにはJavaScriptを有効にしてください。</noscript>
+    </div>
+    <noscript>アプリを使うにはJavaScriptを有効にし、本人確認を行ってください。</noscript>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

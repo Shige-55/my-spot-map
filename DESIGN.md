@@ -1,6 +1,7 @@
 # My Spot Map 技術設計
 
 ## 構成
+2026-11-01追記: 以下の第1〜6段階の記録は初期版の履歴。現在は利用者の承認に基づいて招待制・指定ユーザー間共有を実装中。最新の認証・配信は本書末尾、SHARING_DESIGN.md、PRIVATE_DEPLOYMENT.mdを優先する。
 UI → アプリサービス → SpotRepository → Dexie → IndexedDB。
 Leafletは地図描画と操作のみを担当。UIからDexieを直接呼ばない。初期版はVanilla JavaScript + Viteを採用し、大規模フレームワークやバックエンドは導入しない。
 
@@ -23,7 +24,7 @@ src/pwa/                       # 更新通知
 tests/
 .github/workflows/deploy.yml
 ```
-第5段階では標準Service Worker APIとViteのビルド拡張でPWAを実装し、追加依存を使わない。地図、DB、地点操作、検索・カテゴリ・長押し・現在地、JSONバックアップと復元、PWAと検証環境を作成済み。第6段階で公開先設定とGitHub Actionsを作成し、利用者の依頼に基づくpush・Pages公開・HTTPS上のPC検証まで完了。iPhone実機は未確認。
+第5段階では標準Service Worker APIとViteのビルド拡張でPWAを実装し、追加依存を使わない。地図、DB、地点操作、検索・カテゴリ・長押し・現在地、JSONバックアップと復元、PWAと検証環境を作成済み。第6段階で公開先設定とGitHub Actionsを作成し、利用者の依頼に基づくpush・Pages公開・HTTPS上のPC検証まで完了。iPhoneのブラウザ表示とホーム画面追加は利用者確認済みで、実機での機能別受け入れは継続中。
 
 ### 第1段階の実装
 - `src/config.js`: 初期座標、zoom、タイルURL、帰属表示を集約。
@@ -162,6 +163,11 @@ HTTPSのPagesで現在地・Service Workerを確認。iPhoneからPCのHTTP LAN 
 タイルURLは設定へ集約: https://tile.openstreetmap.org/{z}/{x}/{y}.png 。常時見える「© OpenStreetMap contributors」とhttps://www.openstreetmap.org/copyrightへのリンクを表示。Refererを妨げる設定やキャッシュ回避をしない。可用性保証はないためエラー時も保存済み一覧を提供する。
 
 ## 将来のPC同期（未実装）
+
+2026-11-01の追加依頼は、指定ユーザーへの現在地・地点単位の共有であり、自分の全地点のPC同期とは分離する。今回確定した拡張の構成・データ境界・権限・停止条件・検証条件は[共有仕様・設計](SHARING_DESIGN.md)を参照。共有も今回の段階では未実装。
+
+その後の追加要件で、アプリ全体を本人と本人が招待した利用者だけに制限する設計へ変更した。初回認証・招待確認後は期限付きのオフライン許可で個人機能を利用でき、取消は再接続時または期限で反映する。配信時の認証とAPIの利用者・個別データ権限を両方検証し、現在の無料GitHub Pagesから認証ゲートのある配信先へ移行する。具体的な基盤採用・外部設定・移行・実装は未実施で、現在の公開版は一般公開のまま。
+
 Repositoryの外にSyncServiceとクラウドアダプターを追加。Supabaseは候補であり確定依存にしない。導入時に認証、ownerId、RLS、サーバーrevision、変更カーソル、outbox、再試行を設計する。公開クライアントに管理キーを置かない。
 UUIDとdeletedAtを保ち、ローカル更新と送信待ち記録を同一transactionへ追加する移行を行う。pull/pushは冪等とし、同期成功前にpendingを解除しない。端末時刻のupdatedAtだけで競合を上書きしない。revision不一致時は両案を保持して利用者に選択させる方針。削除伝播確認前に墓石を消さない。復元と同期の扱いは同期導入時に再設計する。
 
@@ -174,3 +180,17 @@ Vitest + fake-indexeddbで検証・検索・Repository永続化・論理削除�
 - Vite / Pages: https://vite.dev/guide/static-deploy.html
 - OSMタイル方針: https://operations.osmfoundation.org/policies/tiles/
 - PWA: https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps
+
+## 招待制・共有拡張の実装（2026-11-01）
+
+- `server/index.js`が全配信資産とAPIの入口。Workers Static Assetsの`run_worker_first: true`を全パスに適用し、プレビューURLを無効化。APP_ORIGIN以外を拒否する。未認証者へは公開の本人確認画面だけを返し、JS／CSS／SW／manifestの直接URLも検査する。
+- `server/passkeys.js`はSimpleWebAuthn serverでWebAuthnのorigin・RP ID・1回限りチャレンジ・本人確認・署名・カウンターを検証。パスキー秘密鍵や生体情報はサーバーへ送らない。管理者初期化は非公開CLIで明示、一般利用者は招待→パスキー登録→管理者承認を必須にする。メールは連絡用。
+- 24時間のHttpOnly／Secure／SameSite=Strict Cookieとサーバーの`auth_sessions`・利用者versionを照合する。書込は同一Origin・JSON・サイズ制限・レート制限を適用。DB障害・設定不足はエラーで閉じ、公開利用や課金へ切り替えない。
+- `server/migrations/0001_access.sql`と`0002_passkeys.sql`はD1の認証・招待・共有関係・地点revision・個別権限・現在地セッションを定義。SQLはパラメーター化し、複数変更はD1 batchで原子的に処理する。解除後の古い地点更新をrevisionで拒否し、関係解除と競合する書込もbatch内で再検証する。
+- `src/main.js`の認証ゲートが有効な署名付き許可を確認後、`src/app.js`を遅延起動。個人地点DBとJSON形式は変更しない。認証状態は別の`my-spot-map-access` DB、共有設定・送信待ちは`my-spot-map-sharing` DB。受信した他人の情報はメモリのみ。
+- オフライン許可はjose ES256、個人機能限定、利用者・origin・端末ID・発行時刻・最長24時間。公開鍵をビルドに固定し、時計の巻戻しと稼働中の単調時計も検査する。失効応答後にオフライン許可へ迂回しない。ログアウトしたセッションIDを端末でも拒否する。
+- `src/sharing/`で地点送信待ち・revision・解除優先・現在地共有を分離。現在地は相互同意が確認できるまで座標を送信せず、5秒通知・15秒期限・位置年齢30秒上限。非表示・通信断・ログアウトで停止し、古い位置取得や応答は世代番号で破棄する。
+- `src/ui/sharingUi.js`はプロフィール、共有申請・承認、地点別共有、現在地開始停止、管理者招待・承認・利用停止を提供。ユーザー入力はtextContentで描画。バックアップ全件復元は共有解除を先に確認する。
+- 配信はWorkers＋D1 Free。カード・Zero Trust／Access・SMTP・有料ドメインは不要。Vite baseは`/`へ変更し、Actionsは検証専用。旧Pagesの停止はバックアップと移行確認後。標準dev／previewにはWorker APIがないため、本番相当の実行はWorkerを使う。
+- SimpleWebAuthn14.0.3、jose6.2.14、Wrangler4.156.0を固定しlockfileへ反映。既存のVite／Leaflet／Dexieは更新しない。Node.js24でのCIとNode.js25のローカル、Worker互換モードを対象とする。ブラウザ側はネイティブWebAuthn APIを使い、別のブラウザSDKを追加しない。
+- `test:private`は隔離した本番ビルド・SQLiteのD1代替・実署名・ブラウザ仮想パスキーで招待承認、ログイン、追加鍵、共有、取消、オフラインログアウトを検証する。実際のD1へはスキーマ適用・配信後の入口拒否を別途確認する。iPhone実機と2人の実現在地の確認は自動テストとは分ける。

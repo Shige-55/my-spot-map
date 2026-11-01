@@ -47,6 +47,8 @@ export function createMapController({ container, status }) {
 
   const markers = new Map();
   const locationLayers = L.layerGroup().addTo(map);
+  const sharedSpotLayers = L.layerGroup().addTo(map);
+  const sharedLocationLayers = L.layerGroup().addTo(map);
   let onRegister = () => {};
   const registration = bindMapRegistration({ container, map, onRegister: (view) => onRegister(view) });
   let onSpotSelect = () => {};
@@ -76,6 +78,23 @@ export function createMapController({ container, status }) {
   });
 
   return {
+    setSharedSpots(spots) {
+      sharedSpotLayers.clearLayers();
+      for (const item of spots) {
+        const marker = L.circleMarker([item.spot.latitude, item.spot.longitude], { radius: 9, color: '#7e2e84', fillOpacity: 0.7 });
+        const label = window.document.createElement('span'); label.textContent = `${item.spot.name}（${item.ownerName}から共有）`;
+        marker.bindTooltip(label); marker.addTo(sharedSpotLayers);
+      }
+    },
+    setSharedLocations(positions) {
+      sharedLocationLayers.clearLayers();
+      for (const item of positions) {
+        const marker = L.circleMarker([item.latitude, item.longitude], { radius: 9, color: '#7e2e84', fillOpacity: 0.9, className: 'shared-location-marker' });
+        const label = window.document.createElement('span'); label.textContent = `${item.name}／${new Date(item.capturedAt).toLocaleTimeString('ja-JP')}／精度 約${Math.round(item.accuracy)}m`;
+        marker.bindTooltip(label); marker.addTo(sharedLocationLayers);
+        L.circle([item.latitude, item.longitude], { radius: Math.min(item.accuracy, 1000000), color: '#7e2e84', weight: 1, fillOpacity: 0.05 }).addTo(sharedLocationLayers);
+      }
+    },
     invalidateSize,
     getView() {
       const center = map.getCenter().wrap();

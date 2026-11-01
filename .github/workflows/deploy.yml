@@ -1,4 +1,4 @@
-name: 検証とGitHub Pages公開
+name: 招待制アプリの検証
 
 on:
   push:
@@ -23,8 +23,6 @@ jobs:
     env:
       CI: 'true'
       PLAYWRIGHT_CHANNEL: chromium
-    outputs:
-      base: ${{ steps.target.outputs.base }}
     steps:
       - name: ソースを取得
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -36,59 +34,15 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: package-lock.json
-      - name: 公開先を確認
-        id: target
-        run: node scripts/check-pages-target.js
       - name: lockfileから依存を導入
         run: npm ci
       - name: Chromiumと必要なOSライブラリを導入
         run: npx playwright install --with-deps chromium
       - name: lint
         run: npm run lint
-      - name: 単体・画面・PWAテスト
+      - name: 単体・画面・PWA・招待制テスト
         run: npm test
-      - name: Pages用にビルド
+      - name: 招待制アプリをビルド
         run: npm run build
-      - name: 公開資産とbaseを検証
+      - name: 配信資産と認証モードを検証
         run: npm run verify:dist
-      - name: distだけをPages用成果物として保存
-        if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        with:
-          path: dist
-          retention-days: 1
-          include-hidden-files: false
-
-  deploy:
-    name: GitHub Pagesへ公開
-    needs: build
-    if: github.event_name == 'workflow_dispatch' && github.repository == 'Shige-55/my-spot-map' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    concurrency:
-      group: github-pages
-      cancel-in-progress: false
-    steps:
-      - name: Pages設定を確認
-        id: pages
-        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-        with:
-          enablement: false
-      - name: Pages設定とビルドbaseの一致を確認
-        env:
-          ACTUAL_BASE_PATH: ${{ steps.pages.outputs.base_path }}
-          EXPECTED_BASE: ${{ needs.build.outputs.base }}
-        run: |
-          if [ "${ACTUAL_BASE_PATH%/}/" != "$EXPECTED_BASE" ]; then
-            printf '%s\n' 'Pagesの公開パスがビルド設定と一致しません。公開を停止します。' >&2
-            exit 1
-          fi
-      - name: 検証済み成果物を配信
-        id: deployment
-        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

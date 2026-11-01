@@ -11,7 +11,7 @@ export default async function buildFixtures() {
     const outDir = resolve(testRoot, name);
     if (!outDir.startsWith(testRoot + sep)) throw new Error('PWA検証出力先が範囲外です。');
     await build({
-      root, configFile: resolve(root, 'vite.config.js'), base, logLevel: 'silent',
+      root, configFile: resolve(root, 'vite.config.js'), mode: 'test-public', base, logLevel: 'silent',
       plugins: [{
         name: 'pwa-test-build-label',
         transformIndexHtml: () => [{ tag: 'meta', attrs: { name: 'pwa-test-build', content: name }, injectTo: 'head' }],

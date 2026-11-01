@@ -27,7 +27,7 @@ createServer(async (request, response) => {
     try {
       if (!previewServer) {
         const { preview } = await import('vite');
-        previewServer = await preview({ root: workspace, configFile: resolve(workspace, 'vite.config.js'),
+        previewServer = await preview({ root: workspace, configFile: resolve(workspace, 'vite.config.js'), base: pagesBase,
           build: { outDir: resolve(root, 'pages') }, preview: { host: '127.0.0.1', port: 4176, strictPort: true } });
       }
       response.end('ok');

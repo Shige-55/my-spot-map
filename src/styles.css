@@ -21,6 +21,19 @@ body {
 button { font: inherit; cursor: pointer; }
 select { font: inherit; font-size: 16px; min-height: 44px; width: 100%; min-width: 0; border: 1px solid #aebfb5; border-radius: 6px; padding: 10px; background: #fff; color: inherit; }
 [hidden] { display: none !important; }
+
+#private-app { display: contents; }
+.access-gate { max-width: 38rem; margin: 12vh auto; padding: max(24px, env(safe-area-inset-top)) 24px; }
+.access-gate h1 { color: #155e56; }
+.access-gate p { line-height: 1.8; }
+.sharing-section { border-top: 1px solid #d7e2dc; padding-top: 16px; margin-top: 16px; }
+.sharing-section label { display: block; margin: 10px 0; }
+.sharing-section input[type="checkbox"] { width: 22px; height: 22px; vertical-align: middle; margin-right: 8px; }
+.sharing-section input[type="text"], .sharing-section input[type="email"], .sharing-section select { width: 100%; }
+.sharing-section button { margin: 4px; }
+.sharing-row { padding: 10px 0; border-bottom: 1px solid #e1e8e3; overflow-wrap: anywhere; }
+.sharing-row p { margin: 6px 0; }
+.shared-location-marker { color: #7e2e84; }
 :focus-visible { outline: 3px solid #b45a17; outline-offset: 3px; }
 .app-header {
   display: flex;

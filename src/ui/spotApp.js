@@ -3,7 +3,7 @@ import { createSpotForm } from './spotForm.js';
 import { createSpotFilters } from './spotFilters.js';
 import { createBackupSettings } from './backupSettings.js';
 
-export function createSpotApp({ root, service, backupService, mapController, viewTabs, locate }) {
+export function createSpotApp({ root, service, backupService, mapController, viewTabs, locate, onSpotChanged = async () => {} }) {
   let spots = [];
   let visibleSpots = [];
   let criteria = { query: '', category: null };
@@ -73,6 +73,7 @@ export function createSpotApp({ root, service, backupService, mapController, vie
       if (visible) select(saved.id);
       announce((id ? '地点の変更を保存しました。' : '地点を保存しました。')
         + (visible ? '' : '現在の絞り込み条件では表示されません。'));
+      await onSpotChanged(saved);
     },
   });
   const load = async () => {
@@ -141,12 +142,13 @@ export function createSpotApp({ root, service, backupService, mapController, vie
     confirmDelete.textContent = '削除中…';
     deleteError.hidden = true;
     try {
-      await service.remove(deletingId);
+      const deleted = await service.remove(deletingId);
       spots = spots.filter((spot) => spot.id !== deletingId);
       if (selectedId === deletingId) selectedId = null;
       render();
       closeDelete();
       announce('地点を削除しました。');
+      await onSpotChanged(deleted);
     } catch (error) {
       deleteError.textContent = error.message;
       deleteError.hidden = false;
