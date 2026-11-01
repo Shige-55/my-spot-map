@@ -194,3 +194,4 @@ Vitest + fake-indexeddbで検証・検索・Repository永続化・論理削除�
 - 配信はWorkers＋D1 Free。カード・Zero Trust／Access・SMTP・有料ドメインは不要。Vite baseは`/`へ変更し、Actionsは検証専用。旧Pagesの停止はバックアップと移行確認後。標準dev／previewにはWorker APIがないため、本番相当の実行はWorkerを使う。
 - SimpleWebAuthn14.0.3、jose6.2.14、Wrangler4.156.0を固定しlockfileへ反映。既存のVite／Leaflet／Dexieは更新しない。Node.js24でのCIとNode.js25のローカル、Worker互換モードを対象とする。ブラウザ側はネイティブWebAuthn APIを使い、別のブラウザSDKを追加しない。
 - `test:private`は隔離した本番ビルド・SQLiteのD1代替・実署名・ブラウザ仮想パスキーで招待承認、ログイン、追加鍵、共有、取消、オフラインログアウトを検証する。実際のD1へはスキーマ適用・配信後の入口拒否を別途確認する。iPhone実機と2人の実現在地の確認は自動テストとは分ける。
+- Cloudflare Static AssetsのHTML正規化で`index.html`が`/`へ転送されるため、シェルのキャッシュResponseにはredirectedが残り得る。そのままnavigateへ返すとブラウザが`ERR_FAILED`にする。SWは画面遷移時だけ本文と安全なヘッダーを持つ合成Responseへ変換し、転送履歴・Content-Encoding・Content-Lengthを引き継がない。`/auth/update`は旧SWが横取りしない公開の復旧画面で、明示操作により更新・SKIP_WAITING・画面再表示を行う。認証、アプリ資産やAPIの認可、DBは変更しない。隔離テストには転送する配信先と壊れた旧SWの固定fixtureを用意し、地点を保持した復旧まで検証する。

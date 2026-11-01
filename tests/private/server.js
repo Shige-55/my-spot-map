@@ -14,6 +14,7 @@ const keys = await generateKeyPair('ES256', { extractable: true });
 process.env.VITE_OFFLINE_PUBLIC_JWK = JSON.stringify(await exportJWK(keys.publicKey));
 const directory = resolve('.pwa-test/private');
 await build({ build: { outDir: directory, emptyOutDir: true }, logLevel: 'error' });
+let legacyWorker = true;
 const sqlite = new DatabaseSync(':memory:');
 for (const file of ['0001_access.sql', '0002_passkeys.sql']) sqlite.exec(readFileSync(resolve('server/migrations', file), 'utf8'));
 const db = {
@@ -35,6 +36,13 @@ const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/cs
 const env = { DB: db, APP_ORIGIN: origin, SESSION_SECRET: 'a'.repeat(64), OFFLINE_PRIVATE_JWK: JSON.stringify(await exportJWK(keys.privateKey)),
   ASSETS: { async fetch(request) {
     const path = new URL(request.url).pathname;
+    // Cloudflare Static Assetsの既定のindex.html正規化を再現する。
+    if (path === '/index.html') return new Response(null, { status: 307, headers: { Location: '/' } });
+    if (path === '/sw.js' && legacyWorker) {
+      const compiled = await readFile(resolve(directory, 'sw.js'), 'utf8');
+      return new Response(compiled.slice(0, compiled.indexOf('\n') + 1) + await readFile(resolve('tests/private/fixtures/legacy-worker.js'), 'utf8'),
+        { headers: { 'Content-Type': 'text/javascript' } });
+    }
     const file = resolve(directory, '.' + (path === '/' ? '/index.html' : path));
     if (!file.startsWith(directory)) return new Response('', { status: 404 });
     try { return new Response(await readFile(file), { headers: { 'Content-Type': types[extname(file)] || 'application/octet-stream' } }); }
@@ -45,6 +53,7 @@ let chain = Promise.resolve();
 const server = createServer((incoming, outgoing) => {
   chain = chain.catch(() => {}).then(async () => {
     const chunks = []; for await (const chunk of incoming) chunks.push(chunk);
+    if (incoming.method === 'POST' && incoming.url === '/__test/fix-worker') { legacyWorker = false; outgoing.writeHead(200); outgoing.end(); return; }
     const request = new Request(origin + incoming.url, { method: incoming.method, headers: incoming.headers,
       ...(!['GET', 'HEAD'].includes(incoming.method) ? { body: Buffer.concat(chunks) } : {}) });
     const response = await worker.fetch(request, env);

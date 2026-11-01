@@ -7,7 +7,7 @@ export function loginPage({ adding = false } = {}) {
   <div ${adding ? 'hidden' : ''}><label for="invitation">招待コード</label><input id="invitation" autocomplete="off" type="text"></div>
   <button id="register" type="button">${adding ? '追加のパスキーを登録' : '招待を受けてパスキーを登録'}</button>
   <p>${adding ? '復旧に備えて別の端末や保存先のパスキーを追加できます。' : '招待リンクは他人へ転送しないでください。登録後は管理者の承認が必要です。メールアドレスの所有確認は行いません。管理者が本人の登録を確認します。カード情報は使用しません。'}</p>
-  <p id="status" role="status"></p><p>個人地点は端末内に保持しています。</p></main>
+  <p id="status" role="status"></p><p>個人地点は端末内に保持しています。</p><p><a href="/auth/update">ログイン後に画面が開かない場合はアプリを更新</a></p></main>
   <script nonce="${nonce}">
   const status=document.querySelector('#status'),token=document.querySelector('#invitation');
   const adding=${adding};

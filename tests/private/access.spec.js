@@ -24,6 +24,21 @@ test('パスキー、管理者承認、共有、取消、入口保護を実ブ�
   await owner.page.goto('/#invite=' + '1'.repeat(64));
   await owner.page.getByRole('button', { name: '招待を受けてパスキーを登録' }).click();
   await expect(owner.page.locator('#register-center')).toBeVisible();
+  await owner.page.locator('#register-center').click();
+  await owner.page.locator('#spot-name').fill('復旧後にも残る架空地点');
+  await owner.page.getByRole('button', { name: '保存', exact: true }).click();
+  await expect(owner.page.locator('#spot-dialog')).toBeHidden();
+  await owner.page.evaluate(async () => { await window.navigator.serviceWorker.ready; });
+  await expect.poll(() => owner.page.evaluate(() => Boolean(window.navigator.serviceWorker.controller))).toBe(true);
+  // 旧SWで実際にERR_FAILEDを再現し、DBやCookieを消さずに復旧する。
+  await expect(owner.page.reload()).rejects.toThrow('ERR_FAILED');
+  expect((await owner.context.request.post('/__test/fix-worker')).status()).toBe(200);
+  await owner.page.goto('/auth/update');
+  await owner.page.getByRole('button', { name: 'アプリを更新して開く', exact: true }).click();
+  await expect(owner.page.locator('#register-center')).toBeVisible();
+  await expect(owner.page.locator('.spot-name')).toHaveText('復旧後にも残る架空地点');
+  await owner.page.reload();
+  await expect(owner.page.locator('#register-center')).toBeVisible();
   // 別の認証器へ追加した鍵でもログインできる。
   await owner.cdp.send('WebAuthn.disable'); await owner.cdp.send('WebAuthn.enable');
   await owner.cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal',

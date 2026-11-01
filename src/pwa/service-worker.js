@@ -44,7 +44,15 @@ globalThis.addEventListener('fetch', (event) => {
   event.respondWith((async () => {
     const cache = await globalThis.caches.open(cacheName);
     // 公開済みの静的資産は同一内容。配信サーバーのVary: Origin差で外れないようにする。
-    return await cache.match(key, { ignoreVary: true }) || globalThis.fetch(request);
+    const response = await cache.match(key, { ignoreVary: true });
+    if (navigation && response?.redirected) {
+      // index.html→/等を経たResponseをnavigateへ直接返すとERR_FAILEDになる。
+      // 復号済み本文を合成Responseにし、転送履歴と元の圧縮サイズを引き継がない。
+      const headers = new globalThis.Headers(response.headers);
+      headers.delete('Content-Encoding'); headers.delete('Content-Length');
+      return new globalThis.Response(response.body, { status: response.status, statusText: response.statusText, headers });
+    }
+    return response || globalThis.fetch(request);
   })());
 });
 

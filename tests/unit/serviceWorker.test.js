@@ -31,7 +31,7 @@ function worker({ failInstall = false } = {}) {
   const env = {
     __MY_SPOT_MAP_PRECACHE__: { base: '/map/', version: 'new', assets: ['index.html', 'assets/main.js', 'manifest.webmanifest'] },
     location: { origin: 'https://example.test' },
-    URL, Request: globalThis.Request, caches,
+    URL, Request: globalThis.Request, Response: globalThis.Response, Headers: globalThis.Headers, caches,
     fetch: vi.fn(async () => new globalThis.Response('ネットワーク')),
     skipWaiting: vi.fn(async () => {}),
     clients: { claim: vi.fn(async () => {}), matchAll: vi.fn(async () => [client, outside]) },
@@ -79,6 +79,16 @@ describe('Service Workerのキャッシュ境界', () => {
     const js = await sw.dispatch('fetch', { request: { url: base + 'assets/main.js', method: 'GET', mode: 'cors' } });
     expect(await js.text()).toBe('架空のアプリ資産');
     expect(sw.env.fetch).not.toHaveBeenCalled();
+  });
+  it('転送履歴のあるキャッシュHTMLを安全な合成Responseで返す', async () => {
+    const sw = worker(); await sw.dispatch('install');
+    const cached = new Response('架空のHTML', { headers: { 'Content-Type': 'text/html', 'Content-Encoding': 'gzip', 'Content-Length': '10', 'Content-Security-Policy': "default-src 'self'" } });
+    Object.defineProperty(cached, 'redirected', { value: true });
+    sw.stores.get(prefix + 'new').set(base + 'index.html', cached);
+    const response = await sw.dispatch('fetch', { request: { url: base, method: 'GET', mode: 'navigate' } });
+    expect(response.redirected).toBe(false); expect(await response.text()).toBe('架空のHTML');
+    expect(response.headers.get('Content-Encoding')).toBeNull(); expect(response.headers.get('Content-Length')).toBeNull();
+    expect(response.headers.get('Content-Security-Policy')).toBe("default-src 'self'");
   });
   it('インストール失敗で新キャッシュだけを破棄し、旧版を保持する', async () => {
     const sw = worker({ failInstall: true });

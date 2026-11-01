@@ -3,6 +3,7 @@ import { base64url, jwtVerify, SignJWT } from 'jose';
 import { HttpError, readBody } from './auth.js';
 import { digest, query, throttle } from './accessRepository.js';
 import { loginPage } from './loginPage.js';
+import { updatePage } from './updatePage.js';
 
 const cookieName = '__Host-myspot-session';
 const json = (body, headers = {}) => Response.json(body, { headers: { 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', ...headers } });
@@ -49,6 +50,7 @@ export async function handlePasskeyRequest(request, env, time) {
   const { origin, rpID } = appConfiguration(env);
   const path = new URL(request.url).pathname;
   if (path === '/auth/login' && request.method === 'GET') return loginPage();
+  if (path === '/auth/update' && request.method === 'GET') return updatePage();
   let ownIdentity;
   if (path === '/auth/add' || path.startsWith('/auth/keys')) {
     ownIdentity = await authenticateSession(request, env);
