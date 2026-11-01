@@ -1,6 +1,7 @@
 import { createSharingRepository } from '../sharing/sharingRepository.js';
 import { createSharingService } from '../sharing/sharingService.js';
 import { createLiveLocationService } from '../sharing/liveLocationService.js';
+import { createQrCanvas } from './qrCode.js';
 
 const element = (tag, text, className) => {
   const node = window.document.createElement(tag); if (text !== undefined) node.textContent = text;
@@ -22,15 +23,23 @@ export function createSharingUi({ root, api, member, spotRepository, mapControll
       <p>名前・メモ・カテゴリ・緯度経度・表示倍率を共有します。共有先だけが閲覧でき、相手による編集はできません。</p>
       <div id="spot-peer-options"></div><button id="sharing-publish" type="button">選択した相手へ共有</button><button id="sharing-revoke" type="button">この地点の共有を解除</button>
       <button id="sharing-retry" type="button">送信待ちを再試行</button><div id="sharing-own"></div></div>
-    <div id="sharing-admin" class="sharing-section" hidden><h4>利用者の招待（管理者専用）</h4><p>利用招待と地点の共有許可は別です。招待された人も他人の地点を自動的には閲覧できません。</p>
-      <label for="sharing-invite-email">招待相手の連絡用メールアドレス</label><input id="sharing-invite-email" type="email" autocomplete="off"><button id="sharing-invite" type="button">利用者を招待</button>
-      <p>メールは自動送信しません。招待リンクを本人へ直接渡し、パスキーの登録申請が本人から届いたことを確認して承認してください。</p>
-      <label for="sharing-invite-link">招待リンク（本人へ直接渡してください。登録後に本人確認・承認が必要です）</label><input id="sharing-invite-link" type="text" readonly><div id="sharing-members"></div></div>`;
+    <div id="sharing-admin" class="sharing-section" hidden><h4>家族・知人を招待（管理者専用）</h4><p>相手専用のアカウントを作ります。利用招待と地点の共有許可は別です。招待された人も他人の地点を自動的には閲覧できません。</p>
+      <label for="sharing-invite-email">招待相手の連絡用メールアドレス</label><input id="sharing-invite-email" type="email" autocomplete="off"><button id="sharing-invite" type="button">招待QRを作成</button>
+      <p>メールは自動送信しません。相手のスマホでQRを読み、パスキーを登録してもらってください。本人の登録を確認したら、この画面で承認します。スマホ同士で完了し、Bluetoothは不要です。</p>
+      <p id="sharing-invite-recipient" role="status"></p><div id="sharing-invite-qr"></div>
+      <label for="sharing-invite-link">家族・知人用の招待リンク（24時間・1回限り、本人へ直接渡してください）</label><input id="sharing-invite-link" type="text" readonly><div id="sharing-members"></div></div>`;
   root.querySelector('#account-section').after(section);
   const sharedSection = element('section', undefined, 'sharing-section'); sharedSection.id = 'received-spots';
   sharedSection.append(element('h3', '共有された地点'), element('p', 'オンラインで許可を確認できる間だけ表示します。'));
   const receivedList = element('div'); sharedSection.append(receivedList); root.querySelector('#spot-list').after(sharedSection);
   const q = (id) => root.querySelector('#' + id);
+  q('sharing-error').after(q('sharing-admin'));
+  q('sharing-admin').hidden = member.role !== 'owner';
+  let invitationEmail = '', invitationExpiry;
+  const clearInvitation = () => {
+    window.clearTimeout(invitationExpiry); invitationEmail = '';
+    q('sharing-invite-link').value = ''; q('sharing-invite-recipient').textContent = ''; q('sharing-invite-qr').replaceChildren();
+  };
   q('sharing-name').value = member.name; q('sharing-code').value = member.id;
   const events = new globalThis.AbortController();
   const report = (error) => { q('sharing-error').textContent = error.message; q('sharing-error').hidden = false; };
@@ -125,9 +134,11 @@ export function createSharingUi({ root, api, member, spotRepository, mapControll
         for (const item of result.members.filter((row) => row.role !== 'owner')) {
           const row = element('div', undefined, 'sharing-row');
           row.append(element('p', `${item.email}：${item.status === 'invited' && item.has_passkey ? '登録済み・管理者承認待ち' : { active: '利用中', invited: '招待中', revoked: '利用停止' }[item.status]}`));
-          if (item.status === 'invited' && item.has_passkey) row.append(action('本人の登録を確認して承認', () => api(`members/${item.id}/approve`, { method: 'POST', body: {} })));
+          if (item.status === 'invited' && item.has_passkey) row.append(action('本人の登録を確認して承認', async () => {
+            await api(`members/${item.id}/approve`, { method: 'POST', body: {} }); if (invitationEmail === item.email) clearInvitation();
+          }));
           row.append(action('利用を停止', async () => {
-            await api(`members/${item.id}`, { method: 'DELETE', body: {} }); clearReceived();
+            await api(`members/${item.id}`, { method: 'DELETE', body: {} }); clearReceived(); if (invitationEmail === item.email) clearInvitation();
           })); q('sharing-members').append(row);
         }
       }
@@ -147,13 +158,18 @@ export function createSharingUi({ root, api, member, spotRepository, mapControll
   bind('sharing-revoke', async () => { if (!q('sharing-spot').value) throw new Error('地点を選んでください。'); await service.revoke(q('sharing-spot').value); });
   bind('sharing-retry', service.flush);
   bind('sharing-invite', async () => {
-    const result = await api('invitations', { method: 'POST', body: { email: q('sharing-invite-email').value } });
+    const cycle = generation, email = q('sharing-invite-email').value.trim().toLowerCase(); clearInvitation();
+    const result = await api('invitations', { method: 'POST', body: { email } });
+    if (cycle !== generation || disposed || !current.online || current.role !== 'owner') return;
     q('sharing-invite-link').value = result.invitationUrl; q('sharing-invite-email').value = '';
+    invitationEmail = email; q('sharing-invite-recipient').textContent = `招待先：${email}／相手のスマホで読み取ってください。`;
+    q('sharing-invite-qr').replaceChildren(createQrCanvas(root, result.invitationUrl, '家族・知人の別アカウントを招待するQRコード'));
+    invitationExpiry = window.setTimeout(clearInvitation, Math.max(0, Math.min(86400000, result.expiresAt - Date.now())));
   });
   const suspend = () => {
     generation++; service.suspend(); void live.stop(); window.clearTimeout(expiry);
     contacts = []; clearReceived(); q('sharing-contacts').replaceChildren(); choices('live-peer-options', []); choices('spot-peer-options', []);
-    q('sharing-members').replaceChildren(); q('sharing-invite-link').value = '';
+    q('sharing-members').replaceChildren(); clearInvitation();
   };
   window.addEventListener('pagehide', suspend, { signal: events.signal });
   root.addEventListener('visibilitychange', () => { if (root.visibilityState === 'hidden') suspend(); }, { signal: events.signal });
@@ -162,6 +178,7 @@ export function createSharingUi({ root, api, member, spotRepository, mapControll
   return {
     setMember(next) {
       current = next; service.setMember(next); section.querySelectorAll('button:not(#sharing-live-stop):not(#sharing-revoke)').forEach((button) => { button.disabled = !next.online; });
+      q('sharing-admin').hidden = next.role !== 'owner';
       if (next.online) { void service.flush(); void refresh(); } else suspend();
     },
     suspend,

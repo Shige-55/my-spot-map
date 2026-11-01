@@ -33,6 +33,8 @@ select { font: inherit; font-size: 16px; min-height: 44px; width: 100%; min-widt
 .sharing-section button { margin: 4px; }
 .sharing-row { padding: 10px 0; border-bottom: 1px solid #e1e8e3; overflow-wrap: anywhere; }
 .sharing-row p { margin: 6px 0; }
+.registration-qr { display: block; max-width: 100%; height: auto; margin: 12px auto; }
+#sharing-invite-recipient { overflow-wrap: anywhere; }
 .shared-location-marker { color: #7e2e84; }
 :focus-visible { outline: 3px solid #b45a17; outline-offset: 3px; }
 .app-header {

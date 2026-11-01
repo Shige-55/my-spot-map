@@ -1,8 +1,8 @@
-import qrcode from 'qrcode-generator';
+import { createQrCanvas } from './qrCode.js';
 
 export function createDeviceEnrollmentUi({ root, api }) {
   const section = root.createElement('section'); section.className = 'sharing-section'; section.id = 'device-enrollment';
-  section.innerHTML = `<h4>ご自身のiPhoneを追加</h4><p>登録リンクをiPhoneで開いてパスキーを作り、PCで確認コードを入力して承認します。Bluetoothは不要です。リンクは10分・1回限りです。他の人の招待には、利用者の招待を使ってください。</p>
+  section.innerHTML = `<h4>ご自身のiPhoneを追加</h4><p>登録リンクをiPhoneで開いてパスキーを作り、PCで確認コードを入力して承認します。Bluetoothは不要です。リンクは10分・1回限りです。他の人の招待には「家族・知人を招待」を使ってください。</p>
     <button id="device-create" type="button">iPhone用の登録リンクを作成</button>
     <p id="device-message" role="status"></p><p id="device-error" role="alert" hidden></p>
     <div id="device-qr"></div><label for="device-link">ご自身のiPhoneで開く登録リンク</label><input id="device-link" type="text" readonly>
@@ -15,13 +15,7 @@ export function createDeviceEnrollmentUi({ root, api }) {
   let online = true, busy = false, loading = false, generation = 0, id = null, disposed = false;
   const clearLink = () => { q('device-link').value = ''; q('device-qr').replaceChildren(); q('device-code').value = ''; };
   const drawQr = (url) => {
-    const qr = qrcode(0, 'M'); qr.addData(url, 'Byte'); qr.make();
-    const size = qr.getModuleCount(), scale = 5, canvas = root.createElement('canvas');
-    canvas.width = canvas.height = (size + 8) * scale; canvas.style.maxWidth = '100%'; canvas.style.height = 'auto';
-    canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', 'iPhoneのカメラで読み取る登録リンクのQRコード');
-    const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#000';
-    for (let row = 0; row < size; row++) for (let column = 0; column < size; column++) if (qr.isDark(row, column)) ctx.fillRect((column + 4) * scale, (row + 4) * scale, scale, scale);
-    q('device-qr').replaceChildren(canvas);
+    q('device-qr').replaceChildren(createQrCanvas(root, url, 'ご自身のiPhoneにパスキーを追加するQRコード'));
   };
   const refresh = async () => {
     if (disposed || loading || busy || !online || root.visibilityState === 'hidden' || !root.querySelector('#settings-dialog').open) return;
