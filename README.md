@@ -11,6 +11,7 @@ iPhone向け地点登録PWAです。個人地点の端末内保存に加え、�
 - D1の2マイグレーションを専用の本番DBへ適用し、[新しい招待制版](https://my-spot-map-private.my-spot-map-shige55.workers.dev)へ配信済み。HTTPSで未認証のHTML直リンク・JS・SW・manifest・アイコン・APIの拒否、不正招待の拒否、管理者登録オプションの発行を確認しました。iPhone幅のログイン画面はJSエラー・横はみ出しなし。
 - 管理者の実パスキー登録とJSON移行の本人確認待ちです。旧Pages停止とiPhone2端末の受け入れは移行確認後に行います。旧サイトの地点を消して移行する必要はありません。
 - ソースはmainへpush済み。初回のNode.js24 CIでPWA障害テストの条件差を検出し、検証サーバーの障害を再試行中も維持するよう修正。`842c62d`の[再検証](https://github.com/Shige-55/my-spot-map/actions/runs/41276034410)で260件・lint・build・verify:distが成功しました。その後、相互の共有相手申請を二重登録しない処理と1件のテストを追加しました。
+- 最終実装`4e03a5a`の[GitHub検証](https://github.com/Shige-55/my-spot-map/actions/runs/41276269467)はNode.js24／Ubuntu24.04／Chromiumで261件・lint・build・verify:distがすべて成功しました。同じ実装を招待制Workerへ配信済みです。管理者の実パスキー登録、JSON移行、旧サイト停止は未完了です。
 - 利用・開発・無料枠・復旧の手順は[招待制版の配信・運用](PRIVATE_DEPLOYMENT.md)、詳しい仕様は[共有設計](SHARING_DESIGN.md)を参照してください。
 
 ## 文書
