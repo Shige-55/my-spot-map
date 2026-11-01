@@ -14,6 +14,8 @@
 
 ## ご自身のiPhoneを追加する（Bluetooth不要）
 
+2026-11-01、利用者が以下の方式でiPhoneのログインと地図表示を実機確認済み。
+
 1. PCで[アプリ更新ページ](https://my-spot-map-private.my-spot-map-shige55.workers.dev/auth/update)から最新版にする。次に[本人確認画面](https://my-spot-map-private.my-spot-map-shige55.workers.dev/auth/login)でパスキーでログインし直す。
 2. PCの「設定→アカウント→ご自身のiPhoneを追加」で「iPhone用の登録リンクを作成」を押す。発行にはログインから10分以内が必要。発行したリンクは10分・1回限り。
 3. PCに出たQRコードをiPhoneの標準カメラで読み、Safariで開く。これは通常のHTTPSリンクなのでPCのBluetoothは使わない。
