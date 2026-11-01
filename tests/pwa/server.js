@@ -46,7 +46,7 @@ createServer(async (request, response) => {
   const file = resolve(directory, relative);
   if (!file.startsWith(directory + sep)) { response.writeHead(404).end(); return; }
   if (failAssets && subpath && extname(file) === '.js' && !file.endsWith('sw.js')) {
-    failAssets = false;
+    // 再起動による更新再試行も同じ障害条件で検証する。次のテストのresetで解除する。
     response.writeHead(503).end('架空の資産取得失敗'); return;
   }
   try {

@@ -269,6 +269,7 @@ test('更新資産の取得が失敗しても旧版を保ち、オフライン�
   await page.evaluate(async () => { await (await window.navigator.serviceWorker.getRegistration()).update(); });
   await expect(page.locator('#pwa-state')).toContainText('準備に失敗');
   await expect(page.locator('meta[name="pwa-test-build"]')).toHaveAttribute('content', 'a');
+  await expect.poll(() => page.evaluate(() => window.caches.keys())).toEqual(caches);
   await context.setOffline(true);
   await page.reload();
   await expect(page.locator('.spot-name')).toHaveText('更新失敗後も残る架空地点');
