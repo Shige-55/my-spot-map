@@ -1,32 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { DatabaseSync } from 'node:sqlite';
-import { readFileSync } from 'node:fs';
+import { sqliteD1 } from '../helpers/sqliteD1.js';
 import { createLocalJWKSet, exportJWK, generateKeyPair, jwtVerify, SignJWT } from 'jose';
 import { createHandler } from '../../server/index.js';
 import { HttpError } from '../../server/auth.js';
-
-function sqliteD1() {
-  const db = new DatabaseSync(':memory:');
-  db.exec(readFileSync(new URL('../../server/migrations/0001_access.sql', import.meta.url), 'utf8'));
-  db.exec(readFileSync(new URL('../../server/migrations/0002_passkeys.sql', import.meta.url), 'utf8'));
-  return {
-    raw: db,
-    prepare(sql) {
-      return { bind(...values) {
-        return {
-          async first() { return db.prepare(sql).get(...values) || null; },
-          async all() { return { results: db.prepare(sql).all(...values) }; },
-          async run() { const result = db.prepare(sql).run(...values); return { meta: { changes: Number(result.changes) } }; },
-        };
-      } };
-    },
-    async batch(statements) {
-      db.exec('BEGIN');
-      try { const results = []; for (const statement of statements) results.push(await statement.run()); db.exec('COMMIT'); return results; }
-      catch (error) { db.exec('ROLLBACK'); throw error; }
-    },
-  };
-}
 
 let env, handler, accessKey, permitKey, time;
 beforeEach(async () => {

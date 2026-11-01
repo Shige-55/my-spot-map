@@ -15,7 +15,7 @@ async function api(page, path, method = 'GET', body) {
 }
 
 test('パスキー、管理者承認、共有、取消、入口保護を実ブラウザで検証する', async ({ browser }) => {
-  const owner = await client(browser), member = await client(browser), stranger = await client(browser);
+  const owner = await client(browser), member = await client(browser), stranger = await client(browser), handset = await client(browser);
   const errors = []; owner.page.on('pageerror', (e) => errors.push(e.message)); member.page.on('pageerror', (e) => errors.push(e.message));
   await stranger.page.goto('/');
   await expect(stranger.page.getByRole('button', { name: 'パスキーでログイン', exact: true })).toBeVisible();
@@ -52,6 +52,38 @@ test('パスキー、管理者承認、共有、取消、入口保護を実ブ�
   await owner.page.goto('/auth/login');
   await owner.page.getByRole('button', { name: 'パスキーでログイン', exact: true }).click();
   await expect(owner.page.locator('#register-center')).toBeVisible();
+  // Bluetoothを使わない別端末追加。端末側の実署名と、元PCでのコード承認を組み合わせる。
+  handset.page.on('pageerror', (e) => errors.push(e.message));
+  await owner.page.getByRole('button', { name: '設定', exact: true }).click();
+  await owner.page.locator('#device-create').click();
+  await expect(owner.page.locator('#device-link')).toHaveValue(/#device=[a-f0-9]{64}$/);
+  await expect(owner.page.locator('#device-qr canvas')).toBeVisible();
+  const registrationUrl = await owner.page.locator('#device-link').inputValue();
+  await handset.page.goto(registrationUrl);
+  await handset.page.getByRole('button', { name: 'このiPhoneにパスキーを登録', exact: true }).click();
+  await expect(handset.page.locator('#device-confirmation')).toBeVisible();
+  expect(new URL(handset.page.url()).hash).toBe('');
+  const confirmationCode = /([A-F0-9]{8})$/.exec(await handset.page.locator('#device-confirmation').innerText())[1];
+  expect((await handset.context.request.get('/sw.js')).status()).toBe(401);
+  await owner.page.waitForTimeout(1100);
+  await handset.page.getByRole('button', { name: 'パスキーでログイン', exact: true }).click();
+  await expect(handset.page.locator('#status')).toContainText('承認');
+  await expect(owner.page.locator('#device-approval')).toBeVisible();
+  await owner.page.locator('#device-code').fill('00000000');
+  await owner.page.locator('#device-approve').click();
+  await expect(owner.page.locator('#device-error')).toContainText('確認コード');
+  await owner.page.waitForTimeout(1100);
+  await owner.page.locator('#device-code').fill(confirmationCode);
+  await owner.page.locator('#device-approve').click();
+  await expect(owner.page.locator('#device-message')).toContainText('端末を承認しました');
+  await expect(owner.page.locator('#device-link')).toHaveValue('');
+  await owner.page.waitForTimeout(1100);
+  await handset.page.getByRole('button', { name: 'パスキーでログイン', exact: true }).click();
+  await expect(handset.page.locator('#register-center')).toBeVisible();
+  const phoneSession = await api(handset.page, 'session', 'POST', { device: '10000000-0000-4000-8000-000000000004' });
+  expect(phoneSession.body.member.id).toBe('10000000-0000-4000-8000-000000000001');
+  expect(phoneSession.body.member.role).toBe('owner');
+  await owner.page.locator('#close-settings').click();
   const invited = await api(owner.page, 'invitations', 'POST', { email: 'family@example.test' });
   expect(invited.status, JSON.stringify(invited.body)).toBe(200);
   await owner.page.waitForTimeout(1100); // 同一IPの認証レート制限を守る。
@@ -98,5 +130,5 @@ test('パスキー、管理者承認、共有、取消、入口保護を実ブ�
   await expect(owner.page.locator('#access-message')).toContainText('ログアウト済み');
   await expect(owner.page.locator('#private-app')).toBeHidden();
   expect(errors).toEqual([]);
-  await Promise.all([owner.context.close(), member.context.close(), stranger.context.close()]);
+  await Promise.all([owner.context.close(), member.context.close(), stranger.context.close(), handset.context.close()]);
 });

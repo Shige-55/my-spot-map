@@ -4,6 +4,7 @@ import { HttpError, readBody } from './auth.js';
 import { digest, query, throttle } from './accessRepository.js';
 import { loginPage } from './loginPage.js';
 import { updatePage } from './updatePage.js';
+import { registerDevice } from './deviceEnrollment.js';
 
 const cookieName = '__Host-myspot-session';
 const json = (body, headers = {}) => Response.json(body, { headers: { 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', ...headers } });
@@ -62,6 +63,7 @@ export async function handlePasskeyRequest(request, env, time) {
   const rateId = await digest(env.SESSION_SECRET + address);
   await throttle(env.DB, rateId, 'auth:' + path, 1000, time);
   const body = await readBody(request, 20000);
+  if (['/auth/device/options', '/auth/device/verify'].includes(path)) return registerDevice(path, body, env, time, origin, rpID);
   if (path === '/auth/keys/options') {
     const member = await query(env.DB, "SELECT * FROM app_members WHERE subject=? AND status='active'", ownIdentity.subject).first();
     const credentials = (await query(env.DB, 'SELECT id,transports FROM auth_credentials WHERE member_id=?', member.id).all()).results;

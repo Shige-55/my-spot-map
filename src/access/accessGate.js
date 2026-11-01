@@ -11,8 +11,9 @@ export function createAccessGate({ root, publicJwk, start }) {
   const service = createAccessService({ repository, api, publicJwk, origin: window.location.origin });
   const events = new globalThis.AbortController();
   let instance = null, busy = false, stopped = false, lastCheck = 0, modal = null;
+  const suspend = () => { instance?.sharing?.suspend(); instance?.devices?.suspend(); };
   const lock = (text) => {
-    instance?.sharing?.suspend();
+    suspend();
     modal ||= root.querySelector('dialog[open]'); modal?.close();
     app.hidden = true; app.inert = true; panel.hidden = false; message.textContent = text;
   };
@@ -21,6 +22,7 @@ export function createAccessGate({ root, publicJwk, start }) {
     if (!instance) instance = await start({ member, api, accessService: service });
     panel.hidden = true; app.hidden = false; app.inert = false;
     instance?.sharing?.setMember(member);
+    instance?.devices?.setOnline(member.online);
     if (modal?.isConnected && !modal.open) modal.showModal(); modal = null;
     root.querySelector('#account-status').textContent = `${member.name}（${member.online ? 'オンライン' : 'オフライン'}）／個人機能の利用期限 ${new Date(member.expiresAt).toLocaleString('ja-JP')}`;
   };
@@ -35,16 +37,16 @@ export function createAccessGate({ root, publicJwk, start }) {
   root.querySelector('#access-retry').addEventListener('click', check, { signal: events.signal });
   root.querySelector('#access-login').addEventListener('click', () => window.location.assign('/auth/login'), { signal: events.signal });
   root.querySelector('#account-logout').addEventListener('click', async () => {
-    instance?.sharing?.suspend(); await service.logout();
+    suspend(); await service.logout();
     try { await api('logout', { method: 'POST', body: {} }); } catch { /* オフライン中も端末の利用許可は破棄する。 */ }
     lock('ログアウトしました。個人地点は端末内に保持しています。');
   }, { signal: events.signal });
   root.addEventListener('visibilitychange', () => {
-    if (root.visibilityState === 'hidden') instance?.sharing?.suspend();
+    if (root.visibilityState === 'hidden') suspend();
     else { lock('利用許可を確認しています…'); void check(); }
   }, { signal: events.signal });
   window.addEventListener('online', check, { signal: events.signal });
-  window.addEventListener('offline', () => { instance?.sharing?.suspend(); void check(); }, { signal: events.signal });
+  window.addEventListener('offline', () => { suspend(); void check(); }, { signal: events.signal });
   const timer = window.setInterval(() => {
     if (root.visibilityState === 'hidden') return;
     if (window.performance.now() - lastCheck >= 15000) void check();

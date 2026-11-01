@@ -1,12 +1,11 @@
 import { createServer } from 'node:http';
-import { DatabaseSync } from 'node:sqlite';
 import { readFile } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
 import { resolve, extname } from 'node:path';
 import { build } from 'vite';
 import { exportJWK, generateKeyPair } from 'jose';
 import worker from '../../server/index.js';
 import { digest } from '../../server/accessRepository.js';
+import { sqliteD1 } from '../helpers/sqliteD1.js';
 
 // 実際の個人情報・秘密鍵・Cloudflareへ接続しない隔離統合環境。
 const origin = 'http://localhost:4180';
@@ -15,20 +14,7 @@ process.env.VITE_OFFLINE_PUBLIC_JWK = JSON.stringify(await exportJWK(keys.public
 const directory = resolve('.pwa-test/private');
 await build({ build: { outDir: directory, emptyOutDir: true }, logLevel: 'error' });
 let legacyWorker = true;
-const sqlite = new DatabaseSync(':memory:');
-for (const file of ['0001_access.sql', '0002_passkeys.sql']) sqlite.exec(readFileSync(resolve('server/migrations', file), 'utf8'));
-const db = {
-  prepare(sql) { return { bind(...values) { return {
-    async first() { return sqlite.prepare(sql).get(...values) || null; },
-    async all() { return { results: sqlite.prepare(sql).all(...values) }; },
-    async run() { return { meta: { changes: Number(sqlite.prepare(sql).run(...values).changes) } }; },
-  }; } }; },
-  async batch(statements) {
-    sqlite.exec('BEGIN');
-    try { const results = []; for (const item of statements) results.push(await item.run()); sqlite.exec('COMMIT'); return results; }
-    catch (error) { sqlite.exec('ROLLBACK'); throw error; }
-  },
-};
+const db = sqliteD1(), sqlite = db.raw;
 sqlite.prepare(`INSERT INTO app_members(id,email,name,role,status,invitation_hash,invitation_expires,created_at,updated_at)
   VALUES (?,?,?,'owner','invited',?,?,?,?)`).run('10000000-0000-4000-8000-000000000001', 'owner@example.test', '架空の管理者',
 await digest('1'.repeat(64)), Date.now() + 86400000, Date.now(), Date.now());

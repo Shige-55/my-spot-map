@@ -3,6 +3,7 @@ import { digest, identifyMember, peers, query, requireCurrent, throttle } from '
 import { issuePermit } from './permits.js';
 import { appConfiguration, authenticateSession, handlePasskeyRequest, logoutSession } from './passkeys.js';
 import { loginPage } from './loginPage.js';
+import { manageDevices } from './deviceEnrollment.js';
 import { pulseLive, readShared, startLive, writeShared } from './sharingRepository.js';
 
 const json = (value, status = 200) => Response.json(value, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' } });
@@ -26,6 +27,7 @@ export function createHandler({ authenticate = authenticateSession, now = () => 
           throw new HttpError(403, '利用招待の受諾が必要です。管理者の招待リンクを開いてください。');
         }
         member = await requireCurrent(env.DB, member);
+        if (url.pathname === '/api/devices' || url.pathname.startsWith('/api/devices/')) return await manageDevices(request, env, member, identity, time);
         if (url.pathname === '/api/logout' && request.method === 'POST') return await logoutSession(request, env, identity);
         if (!url.pathname.startsWith('/api/')) {
           if (!['GET', 'HEAD'].includes(request.method)) throw new HttpError(405, 'この操作は利用できません。');
@@ -163,6 +165,7 @@ export function createHandler({ authenticate = authenticateSession, now = () => 
       await env.DB.batch([query(env.DB, 'DELETE FROM live_sessions WHERE expires_at<=?', time),
         query(env.DB, 'DELETE FROM rate_limits WHERE expires_at<=?', time),
         query(env.DB, 'DELETE FROM auth_challenges WHERE expires_at<=?', time),
+        query(env.DB, 'DELETE FROM device_enrollments WHERE expires_at<=?', time),
         query(env.DB, 'DELETE FROM auth_sessions WHERE expires_at<=?', time)]);
     },
   };

@@ -16,6 +16,8 @@ iPhone向け地点登録PWAです。個人地点の端末内保存に加え、�
 - 2026-11-01の不具合修正: PCでパスキー認証後に`ERR_FAILED`となる問題を、Cloudflareと同じ`index.html`の転送を使う隔離ブラウザで再現しました。転送済みHTMLのキャッシュを画面遷移へ直接返すことが原因です。Service Workerで安全な合成Responseへ変換し、データ・パスキーを保持して更新する[復旧ページ](https://my-spot-map-private.my-spot-map-shige55.workers.dev/auth/update)を追加しました。旧版でのエラー再現→復旧ページで更新→保存地点保持→再ログイン・再読み込みの成功を自動検証しています。修正版を配信後、利用者も復旧ページからPCの地図表示が戻ったことを確認しました。iPhone用パスキー追加と表示は継続確認します。
 - 不具合修正の検証: lint・build・verify:dist・check:private、単体210件、PWA12件、旧SWからの復旧を含む保護付きブラウザ統合1件が成功。本番の復旧画面200とJSエラーなし、未認証SW／共有APIの401を確認しました。地点DB・認証鍵・権限・料金プランの変更はありません。
 - 修正後の`1d7b60f`の[GitHub CI](https://github.com/Shige-55/my-spot-map/actions/runs/41279202846)でも、Node.js24／Chromiumで単体210件＋画面39件＋PWA12件＋保護付き統合1件（計262件）、lint・build・verify:distがすべて成功。エラー画面確定前に次の遷移を始めるテストのタイミング差も修正済みです。
+- 本人のiPhone追加: 利用者のPCにBluetoothデバイスが検出されず、Windows標準のQR認証を選べなかったため、Bluetooth不要の端末追加リンクを実装。PCでリンクを発行→iPhone自身でパスキー作成→元のPCに8桁コードを入力して承認→同じアカウントでログインする。外部QR生成サービスは使わず、新規アカウントやカード登録も不要。実機での操作はこれから確認する。手順はPRIVATE_DEPLOYMENT.mdを参照。
+- 端末追加の検証: 単体217件・画面39件・PWA12件・保護付きブラウザ統合1件（計269件）とlint・build・verify:dist・check:privateがローカルで成功。本番依存のnpm auditは0件。`0003_device_enrollments.sql`を本番へ追加適用し、既存の鍵や利用者を置き換えずに専用の待機テーブルを作成しました。
 - 利用・開発・無料枠・復旧の手順は[招待制版の配信・運用](PRIVATE_DEPLOYMENT.md)、詳しい仕様は[共有設計](SHARING_DESIGN.md)を参照してください。
 
 ## 文書
