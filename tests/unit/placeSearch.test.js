@@ -40,7 +40,7 @@ test('入力語だけを識別可能なUAで送り、結果を検証して返す
   const [url,options]=fetchGeocoder.mock.calls[0];expect(new URL(url).searchParams.get('q')).toBe('架空の施設');
   expect(new URL(url).searchParams.get('limit')).toBe('5');expect(new URL(url).searchParams.has('viewbox')).toBe(false);
   expect(options.headers['User-Agent']).toContain(env.APP_ORIGIN);expect(options.headers.Cookie).toBeUndefined();expect(url).not.toContain(ids[0]);
-  expect(options.redirect).toBe('error');expect(response.headers.get('cache-control')).toBe('no-store');
+  expect(options.redirect).toBe('manual');expect(response.headers.get('cache-control')).toBe('no-store');
   const row=db.raw.prepare('SELECT * FROM place_search_cache').get();expect(row.cache_key).toMatch(/^[a-f0-9]{64}$/);
   expect(row.expires_at-time).toBe(7*86400000);expect(JSON.stringify(row)).not.toContain('架空の施設');
 });
@@ -77,6 +77,14 @@ test('タイムアウト等で自動再試行せず、通信中の利用取消�
   fetchGeocoder.mockRejectedValueOnce(new Error('timeout'));expect((await call()).status).toBe(502);expect(fetchGeocoder).toHaveBeenCalledTimes(1);
   time+=1600;fetchGeocoder.mockImplementationOnce(async()=>{db.raw.prepare("UPDATE app_members SET status='revoked' WHERE id=?").run(ids[0]);return Response.json(found);});
   expect((await call()).status).toBe(403);
+});
+test('Workerで禁止されたredirect:errorを使わず、外部の転送先へ追従しない',async()=>{
+  fetchGeocoder.mockImplementation(async(_url,options)=>{
+    if (options.redirect !== 'manual') throw new TypeError('Invalid redirect value');
+    return new Response(null,{status:302,headers:{Location:'https://other.example.test/'}});
+  });
+  expect((await call()).status).toBe(502);expect(fetchGeocoder).toHaveBeenCalledTimes(1);
+  expect(db.raw.prepare('SELECT count(*) n FROM place_search_cache').get().n).toBe(0);
 });
 test('移行は既存の利用者・地点を保持し、期限切れキャッシュを掃除する',async()=>{
   const previous=sqliteD1(['0001_access.sql','0002_passkeys.sql','0003_device_enrollments.sql']);

@@ -207,3 +207,4 @@ Vitest + fake-indexeddbで検証・検索・Repository永続化・論理削除�
 - 外部応答は32KiB・5件・表示名600文字まで、有限の緯度経度を検証する。HTML・過大応答・範囲外・サービス障害は502、停止や設定不備は503として地図操作と切り離す。外部へ明示的に渡すのは検索語・出力形式等とアプリ識別UAだけで、Cookie・会員情報・現在地・保存地点は渡さない。ブラウザから直接Nominatimへ接続しないため、既存のCSP connect-src selfを維持する。
 - Workerの`PLACE_SEARCH_ENABLED`と`PLACE_SEARCH_URL`で停止・Nominatim互換の検索先変更ができ、利用者のアプリ更新を要しない。追加依存なし。検索データのOSM/ODbL帰属と、個人・秘密情報を送信しない注意を検索欄に表示する。
 - 基準資料: [Nominatim利用条件](https://operations.osmfoundation.org/policies/nominatim/)、[検索API](https://nominatim.org/release-docs/latest/api/Search/)。これは本アプリ向けの利用であり、一般向け無制限の検索APIや入力補完サービスとして提供しない。
+- Cloudflare実行環境の確認: Workerのfetchは`redirect: 'error'`を受け付けず通信前にTypeErrorとなるため、`manual`と`response.ok`の検証で3xxを拒否する。[Cloudflare Request仕様](https://developers.cloudflare.com/workers/runtime-apis/request/)を参照。`fetchPlaceResults`を本番と一時リモートの疎通確認で共通利用し、PCでの代替応答だけでは検証済みとしない。2026-11-02にCloudflare上で旧設定のエラーを再現し、修正後の「東京駅」候補5件取得を確認済み。診断用WorkerはアプリのDB・秘密鍵・認証バインディングを持たず、確認後に停止する。

@@ -35,6 +35,19 @@ async function responseJson(response) {
   return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(buffer));
 }
 
+// Worker上の疎通確認でも、本番と同じ通信・応答検証を使う。
+export async function fetchPlaceResults(endpoint, text, origin, fetchGeocoder = globalThis.fetch) {
+  const url = new URL(endpoint);
+  url.searchParams.set('q', text); url.searchParams.set('format', 'jsonv2');
+  url.searchParams.set('limit', '5'); url.searchParams.set('accept-language', 'ja');
+  // Cookie・利用者情報・現在地・保存地点・元リクエストのヘッダーを外部へ渡さない。
+  const response = await fetchGeocoder(url.href, { headers: { Accept: 'application/json',
+    'User-Agent': `MySpotMap/1.0 (+${origin}/; https://github.com/Shige-55/my-spot-map)` },
+  // Workersはredirect:errorを受け付けない。manualで3xxも通常の異常応答として拒否する。
+  redirect: 'manual', signal: globalThis.AbortSignal.timeout(8000) });
+  return results(await responseJson(response));
+}
+
 export async function searchPlaces({ env, member, body, now = () => Date.now(), fetchGeocoder = globalThis.fetch }) {
   if (env.PLACE_SEARCH_ENABLED !== 'true') throw new HttpError(503, '住所・施設名検索は現在停止しています。地図を動かして場所を選んでください。');
   const text = searchText(body.query), time = now();
@@ -65,13 +78,7 @@ export async function searchPlaces({ env, member, body, now = () => Date.now(), 
   }
   try {
     if (now() - reservedAt > 6000) throw new Error('expired reservation');
-    endpoint.searchParams.set('q', text); endpoint.searchParams.set('format', 'jsonv2');
-    endpoint.searchParams.set('limit', '5'); endpoint.searchParams.set('accept-language', 'ja');
-    // Cookie・利用者情報・現在地・保存地点・元リクエストのヘッダーを外部へ渡さない。
-    const response = await fetchGeocoder(endpoint.href, { headers: { Accept: 'application/json',
-      'User-Agent': `MySpotMap/1.0 (+${env.APP_ORIGIN}/; https://github.com/Shige-55/my-spot-map)` },
-    redirect: 'error', signal: globalThis.AbortSignal.timeout(8000) });
-    const found = results(await responseJson(response));
+    const found = await fetchPlaceResults(endpoint, text, env.APP_ORIGIN, fetchGeocoder);
     await query(env.DB, `INSERT INTO place_search_cache(cache_key,payload,expires_at) VALUES(?,?,?)
       ON CONFLICT(cache_key) DO UPDATE SET payload=excluded.payload,expires_at=excluded.expires_at`, key, JSON.stringify(found), now() + CACHE_MS).run();
     await requireCurrent(env.DB, member);
