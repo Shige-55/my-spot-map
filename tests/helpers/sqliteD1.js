@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 
-export const migrations = ['0001_access.sql', '0002_passkeys.sql', '0003_device_enrollments.sql'];
+export const migrations = ['0001_access.sql', '0002_passkeys.sql', '0003_device_enrollments.sql', '0004_place_search.sql'];
 export function sqliteD1(files = migrations) {
   const db = new DatabaseSync(':memory:');
   for (const file of files) db.exec(readFileSync(new URL('../../server/migrations/' + file, import.meta.url), 'utf8'));

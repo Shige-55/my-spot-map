@@ -11,7 +11,7 @@ export function createAccessGate({ root, publicJwk, start }) {
   const service = createAccessService({ repository, api, publicJwk, origin: window.location.origin });
   const events = new globalThis.AbortController();
   let instance = null, busy = false, stopped = false, lastCheck = 0, modal = null;
-  const suspend = () => { instance?.sharing?.suspend(); instance?.devices?.suspend(); };
+  const suspend = () => { instance?.sharing?.suspend(); instance?.devices?.suspend(); instance?.placeSearch?.suspend(); };
   const lock = (text) => {
     suspend();
     modal ||= root.querySelector('dialog[open]'); modal?.close();
@@ -23,6 +23,7 @@ export function createAccessGate({ root, publicJwk, start }) {
     panel.hidden = true; app.hidden = false; app.inert = false;
     instance?.sharing?.setMember(member);
     instance?.devices?.setOnline(member.online);
+    instance?.placeSearch?.setOnline(member.online);
     if (modal?.isConnected && !modal.open) modal.showModal(); modal = null;
     root.querySelector('#account-status').textContent = `${member.name}（${member.online ? 'オンライン' : 'オフライン'}）／個人機能の利用期限 ${new Date(member.expiresAt).toLocaleString('ja-JP')}`;
   };

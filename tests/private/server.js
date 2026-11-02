@@ -3,12 +3,17 @@ import { readFile } from 'node:fs/promises';
 import { resolve, extname } from 'node:path';
 import { build } from 'vite';
 import { exportJWK, generateKeyPair } from 'jose';
-import worker from '../../server/index.js';
+import { createHandler } from '../../server/index.js';
 import { digest } from '../../server/accessRepository.js';
 import { sqliteD1 } from '../helpers/sqliteD1.js';
 
 // 実際の個人情報・秘密鍵・Cloudflareへ接続しない隔離統合環境。
 const origin = 'http://localhost:4180';
+const worker = createHandler({ fetchGeocoder: async (url) => {
+  const q = new URL(url).searchParams.get('q');
+  if (q === '候補多数') return Response.json(Array.from({ length: 5 }, (_, i) => ({ display_name: `架空の候補${i + 1}`, lat: '34.7', lon: '135.5' })));
+  return Response.json(q === '候補なし' ? [] : [{ display_name: '<img src=x onerror=alert(1)> 架空の検索公園', lat: '34.7', lon: '135.5' }]);
+} });
 const keys = await generateKeyPair('ES256', { extractable: true });
 process.env.VITE_OFFLINE_PUBLIC_JWK = JSON.stringify(await exportJWK(keys.publicKey));
 const directory = resolve('.pwa-test/private');
@@ -20,6 +25,7 @@ sqlite.prepare(`INSERT INTO app_members(id,email,name,role,status,invitation_has
 await digest('1'.repeat(64)), Date.now() + 86400000, Date.now(), Date.now());
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png' };
 const env = { DB: db, APP_ORIGIN: origin, SESSION_SECRET: 'a'.repeat(64), OFFLINE_PRIVATE_JWK: JSON.stringify(await exportJWK(keys.privateKey)),
+  PLACE_SEARCH_ENABLED: 'true', PLACE_SEARCH_URL: 'https://geocoder.example.test/search',
   ASSETS: { async fetch(request) {
     const path = new URL(request.url).pathname;
     // Cloudflare Static Assetsの既定のindex.html正規化を再現する。

@@ -131,7 +131,10 @@ test('ブラウザのタッチを600ms長押しした位置で一度だけ開き
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await expect(page.getByRole('button', { name: '地図中心を登録' })).toBeEnabled();
-  await page.clock.install();
+  // installだけでは実時間でも進むため、599msの境界検査前に明示的に停止する。
+  const frozen = new Date('2026-11-02T00:00:00Z');
+  await page.clock.install({ time: frozen });
+  await page.clock.pauseAt(new Date(frozen.getTime() + 60000));
   const box = await page.locator('#map').boundingBox();
   const touch = { x: box.x + box.width * 0.7, y: box.y + box.height * 0.6, id: 1 };
   const cdp = await context.newCDPSession(page);

@@ -41,6 +41,48 @@ test('パスキー、管理者承認、共有、取消、入口保護を実ブ�
   await expect(owner.page.locator('.spot-name')).toHaveText('復旧後にも残る架空地点');
   await owner.page.reload();
   await expect(owner.page.locator('#register-center')).toBeVisible();
+  // スマホでの外部地名検索。実サービスには接続せず、候補選択・位置・安全表示を検証。
+  await owner.page.setViewportSize({ width: 390, height: 844 });
+  await owner.page.locator('#place-search summary').click();
+  await owner.page.locator('#place-query').fill('架空の検索公園');
+  let searches = 0; owner.page.on('request', (r) => { if (r.url().endsWith('/api/place-search')) searches++; });
+  await owner.page.waitForTimeout(200); expect(searches).toBe(0);
+  await owner.page.locator('#place-search-submit').click();
+  await expect(owner.page.locator('#place-search-results button')).toHaveCount(1);
+  await expect(owner.page.locator('#place-search-results')).toContainText('<img src=x onerror=alert(1)>');
+  expect(await owner.page.locator('#place-search-results img').count()).toBe(0);
+  expect(await owner.page.evaluate(() => window.document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+  await owner.page.screenshot({ path: test.info().outputPath('place-search-phone.png') });
+  await owner.page.locator('#place-search-results button').click();
+  await expect(owner.page.locator('.search-location-marker')).toBeVisible();
+  await expect(owner.page.locator('.leaflet-control-attribution')).toContainText('OpenStreetMap');
+  await owner.page.locator('#register-center').click();
+  await expect.poll(async () => Number(await owner.page.locator('#spot-latitude').inputValue())).toBeCloseTo(34.7, 4);
+  await expect.poll(async () => Number(await owner.page.locator('#spot-longitude').inputValue())).toBeCloseTo(135.5, 4);
+  await owner.page.locator('#cancel-spot').click();
+  // 検索だけで地点を自動保存せず、APIをSWキャッシュへ残さない。
+  await expect(owner.page.locator('.spot-card')).toHaveCount(1);
+  expect(await owner.page.evaluate(async () => (await Promise.all((await window.caches.keys()).map(async (key) =>
+    (await (await window.caches.open(key)).keys()).map(r => r.url)))).flat().some(url => url.includes('/api/place-search')))).toBe(false);
+  await owner.page.locator('#place-search summary').click();
+  await owner.page.setViewportSize({ width: 320, height: 568 });
+  await owner.page.waitForTimeout(1600);
+  await owner.page.locator('#place-query').fill('候補多数'); await owner.page.locator('#place-search-submit').click();
+  await expect(owner.page.locator('#place-search-results button')).toHaveCount(5);
+  await expect(owner.page.locator('.leaflet-control-attribution')).toBeInViewport({ ratio: 1 });
+  expect(await owner.page.evaluate(() => window.document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
+  await owner.page.screenshot({ path: test.info().outputPath('place-search-small-phone.png') });
+  await owner.page.setViewportSize({ width: 390, height: 844 });
+  await owner.page.waitForTimeout(1600);
+  await owner.page.locator('#place-query').fill('候補なし'); await owner.page.locator('#place-search-submit').click();
+  await expect(owner.page.locator('#place-search-status')).toContainText('見つかりません');
+  await owner.context.setOffline(true);
+  await expect(owner.page.locator('#place-search-submit')).toBeDisabled();
+  await expect(owner.page.locator('#place-query')).toHaveValue('');
+  await owner.context.setOffline(false);
+  await expect(owner.page.locator('#place-search-submit')).toBeEnabled();
+  expect((await stranger.context.request.post('/api/place-search', { data: { query: '架空施設' }, headers: { Origin: 'http://localhost:4180' } })).status()).toBe(401);
+  await owner.page.setViewportSize({ width: 1280, height: 800 });
   // 別の認証器へ追加した鍵でもログインできる。
   await owner.cdp.send('WebAuthn.disable'); await owner.cdp.send('WebAuthn.enable');
   await owner.cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal',

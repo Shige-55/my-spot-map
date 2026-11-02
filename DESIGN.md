@@ -197,3 +197,13 @@ Vitest + fake-indexeddbで検証・検索・Repository永続化・論理削除�
 - `test:private`は隔離した本番ビルド・SQLiteのD1代替・実署名・ブラウザ仮想パスキーで招待承認、ログイン、追加鍵、共有、取消、オフラインログアウトを検証する。実際のD1へはスキーマ適用・配信後の入口拒否を別途確認する。iPhone実機と2人の実現在地の確認は自動テストとは分ける。
 - Cloudflare Static AssetsのHTML正規化で`index.html`が`/`へ転送されるため、シェルのキャッシュResponseにはredirectedが残り得る。そのままnavigateへ返すとブラウザが`ERR_FAILED`にする。SWは画面遷移時だけ本文と安全なヘッダーを持つ合成Responseへ変換し、転送履歴・Content-Encoding・Content-Lengthを引き継がない。`/auth/update`は旧SWが横取りしない公開の復旧画面で、明示操作により更新・SKIP_WAITING・画面再表示を行う。認証、アプリ資産やAPIの認可、DBは変更しない。隔離テストには転送する配信先と壊れた旧SWの固定fixtureを用意し、地点を保持した復旧まで検証する。
 - Bluetooth不要の本人端末追加: `0003_device_enrollments.sql`を追加。`server/deviceEnrollment.js`が期限付きリンク発行、iPhoneの署名検証、待機鍵、元PCによる確認コード承認を分離する。ログインは引き続き`auth_credentials`の有効な鍵だけを使い、待機中の鍵は受け付けない。`src/ui/deviceEnrollmentUi.js`は専用のQR・コード入力UIを担当し、qrcode-generator 2.0.4（ES Modules・追加依存なし）でURLを外部送信せず描画する。元PCセッション・利用者versionをD1内でも毎回照合し、上限と二重操作をbatchで検証する。既存スキーマのデータを削除しない。
+
+## 住所・施設名検索（2026-11-02）
+
+- 利用者の無料範囲での実装指定により、初期版では対象外だった外部地名検索を追加。`src/ui/placeSearchUi.js` → `src/services/placeSearchService.js` → 認証・Origin確認済み`POST /api/place-search` → `server/placeSearch.js`の順で処理する。入力時の通信はなく、検索・Enterで最大5候補を取得する。検索語はPOST本文に入れ、URL履歴に入れない。結果はtextContentで表示し、座標・倍率をクライアントでも再検証する。
+- 地図側の開閉パネルから検索し、選択後はパネルを閉じて再描画・zoom16への移動と専用の印を出す。登録は従来の「地図中心を登録」を使い、検索だけではDBを変更しない。非表示・通信断・アクセスロックではAbortControllerと世代で古い応答を破棄し、入力・候補・印を消す。検索結果はメモリ内のみで、JSON・IndexedDB・SWへ入れない。
+- `0004_place_search.sql`で専用キャッシュと全体制御1行を追加。既存の個人地点・共有・鍵のテーブルは変更しない。検索先URL・日本語指定・NFKC正規化した語のハッシュをキーとし、検証した候補だけを7日保存する。検索語そのものと利用者との関連は保存しない。ハッシュは匿名化の保証ではなく、表示候補に住所等が入るため個人情報の入力は避けるよう案内する。期限切れは既存の定期処理で削除。
+- D1の単一条件付きUPDATEで全利用者の外部通信枠と日次200回を確保し、同時通信は1件。15秒の通信予約、外部8秒タイムアウト、開始が6秒超遅れた予約の拒否、完了後1.5秒の空き時間で重複・連続送信を抑える。予約の世代を確認して解放し、競合時は429を返す。別Worker・別ユーザーも同じ枠を使い、自動待機・自動再送はしない。利用者単位でも1.5秒の連打を抑え、キャッシュ利用は日次の外部通信回数に数えない。
+- 外部応答は32KiB・5件・表示名600文字まで、有限の緯度経度を検証する。HTML・過大応答・範囲外・サービス障害は502、停止や設定不備は503として地図操作と切り離す。外部へ明示的に渡すのは検索語・出力形式等とアプリ識別UAだけで、Cookie・会員情報・現在地・保存地点は渡さない。ブラウザから直接Nominatimへ接続しないため、既存のCSP connect-src selfを維持する。
+- Workerの`PLACE_SEARCH_ENABLED`と`PLACE_SEARCH_URL`で停止・Nominatim互換の検索先変更ができ、利用者のアプリ更新を要しない。追加依存なし。検索データのOSM/ODbL帰属と、個人・秘密情報を送信しない注意を検索欄に表示する。
+- 基準資料: [Nominatim利用条件](https://operations.osmfoundation.org/policies/nominatim/)、[検索API](https://nominatim.org/release-docs/latest/api/Search/)。これは本アプリ向けの利用であり、一般向け無制限の検索APIや入力補完サービスとして提供しない。

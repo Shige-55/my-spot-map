@@ -5,11 +5,12 @@ import { appConfiguration, authenticateSession, handlePasskeyRequest, logoutSess
 import { loginPage } from './loginPage.js';
 import { manageDevices } from './deviceEnrollment.js';
 import { pulseLive, readShared, startLive, writeShared } from './sharingRepository.js';
+import { searchPlaces } from './placeSearch.js';
 
 const json = (value, status = 200) => Response.json(value, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' } });
 const emailPattern = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,63}$/;
 
-export function createHandler({ authenticate = authenticateSession, now = () => Date.now() } = {}) {
+export function createHandler({ authenticate = authenticateSession, now = () => Date.now(), fetchGeocoder = globalThis.fetch } = {}) {
   return {
     async fetch(request, env) {
       try {
@@ -29,6 +30,9 @@ export function createHandler({ authenticate = authenticateSession, now = () => 
         member = await requireCurrent(env.DB, member);
         if (url.pathname === '/api/devices' || url.pathname.startsWith('/api/devices/')) return await manageDevices(request, env, member, identity, time);
         if (url.pathname === '/api/logout' && request.method === 'POST') return await logoutSession(request, env, identity);
+        if (url.pathname === '/api/place-search' && request.method === 'POST') {
+          return json(await searchPlaces({ env, member, body: await readBody(request, 1500), now, fetchGeocoder }));
+        }
         if (!url.pathname.startsWith('/api/')) {
           if (!['GET', 'HEAD'].includes(request.method)) throw new HttpError(405, 'この操作は利用できません。');
           const response = await env.ASSETS.fetch(request);
@@ -166,6 +170,7 @@ export function createHandler({ authenticate = authenticateSession, now = () => 
         query(env.DB, 'DELETE FROM rate_limits WHERE expires_at<=?', time),
         query(env.DB, 'DELETE FROM auth_challenges WHERE expires_at<=?', time),
         query(env.DB, 'DELETE FROM device_enrollments WHERE expires_at<=?', time),
+        query(env.DB, 'DELETE FROM place_search_cache WHERE expires_at<=?', time),
         query(env.DB, 'DELETE FROM auth_sessions WHERE expires_at<=?', time)]);
     },
   };

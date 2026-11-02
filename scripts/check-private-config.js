@@ -1,6 +1,13 @@
 import { readFileSync, readdirSync } from 'node:fs';
 
 const config = JSON.parse(readFileSync(new URL('../wrangler.local.jsonc', import.meta.url), 'utf8'));
+if (config.vars?.PLACE_SEARCH_ENABLED === 'true') {
+  let endpoint;
+  try { endpoint = new URL(config.vars.PLACE_SEARCH_URL); } catch { throw new Error('住所検索の検索先を確認してください。'); }
+  if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) {
+    throw new Error('住所検索には認証情報・query・fragmentのないHTTPSの検索先を設定してください。');
+  }
+}
 if (config.assets?.run_worker_first !== true || config.preview_urls !== false
   || config.observability?.enabled !== false || config.d1_databases?.length !== 1
   || !/^[a-f0-9-]{36}$/.test(config.d1_databases[0].database_id)

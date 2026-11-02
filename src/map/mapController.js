@@ -49,6 +49,7 @@ export function createMapController({ container, status }) {
   const locationLayers = L.layerGroup().addTo(map);
   const sharedSpotLayers = L.layerGroup().addTo(map);
   const sharedLocationLayers = L.layerGroup().addTo(map);
+  const searchLayers = L.layerGroup().addTo(map);
   let onRegister = () => {};
   const registration = bindMapRegistration({ container, map, onRegister: (view) => onRegister(view) });
   let onSpotSelect = () => {};
@@ -78,6 +79,14 @@ export function createMapController({ container, status }) {
   });
 
   return {
+    clearSearchLocation() { searchLayers.clearLayers(); },
+    showSearchLocation(result) {
+      searchLayers.clearLayers();
+      const marker = L.circleMarker([result.latitude, result.longitude], { radius: 10, color: '#b45a17', fillOpacity: 0.6, className: 'search-location-marker' });
+      const label = window.document.createElement('span'); label.textContent = result.label;
+      marker.bindTooltip(label); marker.addTo(searchLayers); marker.getElement()?.setAttribute('aria-label', '住所・施設名の検索位置');
+      pendingSpot = result; scheduleFocus();
+    },
     setSharedSpots(spots) {
       sharedSpotLayers.clearLayers();
       for (const item of spots) {

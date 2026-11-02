@@ -9,6 +9,7 @@ import { createBackupService } from './services/backupService.js';
 import { createPwaUi } from './pwa/pwaUi.js';
 import { createSharingUi } from './ui/sharingUi.js';
 import { createDeviceEnrollmentUi } from './ui/deviceEnrollmentUi.js';
+import { createPlaceSearchUi } from './ui/placeSearchUi.js';
 
 export async function startApplication(access = null) {
   const root = window.document;
@@ -20,10 +21,11 @@ export async function startApplication(access = null) {
   const backupService = createBackupService(repository);
   const sharing = access ? createSharingUi({ root, api: access.api, member: access.member, spotRepository: repository, mapController, viewTabs }) : null;
   const devices = access ? createDeviceEnrollmentUi({ root, api: access.api }) : null;
+  const placeSearch = access ? createPlaceSearchUi({ root, api: access.api, mapController, viewTabs, online: access.member.online }) : null;
   const backup = sharing ? { ...backupService, async restore(...args) { await sharing.canRestore(); return backupService.restore(...args); } } : backupService;
   const spotApp = createSpotApp({ root, service: spotService, backupService: backup, mapController, viewTabs, locate: getCurrentLocation,
     onSpotChanged: sharing ? sharing.sourceChanged : async () => {} });
   const pwaUi = createPwaUi({ root });
   if (!access) root.querySelector('#account-section').hidden = true;
-  return { sharing, devices, destroy() { devices?.destroy(); sharing?.destroy(); pwaUi.destroy(); spotApp.destroy(); viewTabs.destroy(); mapController.destroy(); db.close(); } };
+  return { sharing, devices, placeSearch, destroy() { placeSearch?.destroy(); devices?.destroy(); sharing?.destroy(); pwaUi.destroy(); spotApp.destroy(); viewTabs.destroy(); mapController.destroy(); db.close(); } };
 }

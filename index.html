@@ -74,6 +74,17 @@
           <h2 id="map-heading">地図</h2>
           <div class="map-actions"><button id="locate" type="button" class="secondary-button">現在地</button><button id="register-center" type="button" class="primary-button" disabled>地図中心を登録</button></div>
         </div>
+        <details id="place-search" class="place-search" hidden>
+          <summary>住所・施設名で地図を移動</summary>
+          <form id="place-search-form" role="search" aria-label="住所・施設名の検索">
+            <label for="place-query">住所・施設名（2〜120文字）</label>
+            <div class="place-search-input"><input id="place-query" type="search" autocomplete="off" placeholder="例：東京駅、横浜市中区" aria-describedby="place-search-help" /><button id="place-search-submit" type="submit" class="primary-button">検索</button></div>
+            <p id="place-search-help">検索ボタンを押すと、入力した語をOpenStreetMapの検索サービスへ送信します。自宅住所・個人名などの個人情報や秘密情報は入力しないでください。オンライン専用で、施設が見つからない場合もあります。</p>
+            <p id="place-search-status" role="status" aria-live="polite"></p>
+            <ul id="place-search-results" aria-label="場所の検索結果"></ul>
+            <div class="place-search-footer"><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">検索データ © OpenStreetMap contributors（ODbL）</a><button id="place-search-clear" type="button" class="text-button">検索を消去</button></div>
+          </form>
+        </details>
         <p id="map-status" class="map-status" role="status" hidden></p>
         <p id="location-status" class="location-status" role="status" hidden></p>
         <div id="map" aria-label="地図。矢印キーで移動、プラス・マイナスキーで拡大・縮小できます。"></div>

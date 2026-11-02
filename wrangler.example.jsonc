@@ -10,5 +10,5 @@
   "d1_databases": [{ "binding": "DB", "database_name": "my-spot-map-private", "database_id": "設定時に置換", "migrations_dir": "server/migrations" }],
   "triggers": { "crons": ["* * * * *"] },
   "observability": { "enabled": false },
-  "vars": { "APP_ORIGIN": "設定時に置換" }
+  "vars": { "APP_ORIGIN": "設定時に置換", "PLACE_SEARCH_ENABLED": "true", "PLACE_SEARCH_URL": "https://nominatim.openstreetmap.org/search" }
 }
